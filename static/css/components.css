@@ -132,6 +132,15 @@
     background: var(--danger-hover);
 }
 
+.btn-combo {
+    background: var(--combo-color);
+    color: white;
+}
+
+.btn-combo:hover {
+    background: var(--combo-hover);
+}
+
 .btn-download {
     background: #10b981;
     color: white;
@@ -400,6 +409,20 @@
 
 .unsub-btn.delete-btn:hover {
     background: var(--danger-hover);
+}
+
+.unsub-btn.combo-btn {
+    background: var(--combo-color);
+    color: white;
+}
+
+.unsub-btn.combo-btn:hover {
+    background: var(--combo-hover);
+}
+
+.result-count.deleted {
+    color: var(--text-tertiary);
+    font-style: italic;
 }
 
 /* Type badges */
