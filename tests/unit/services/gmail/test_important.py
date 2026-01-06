@@ -97,9 +97,7 @@ class TestMarkImportantBackground:
 
         mock_batch_modify = Mock()
         mock_batch_modify.execute.return_value = {}
-        mock_service.users.return_value.messages.return_value.batchModify.return_value = (
-            mock_batch_modify
-        )
+        mock_service.users.return_value.messages.return_value.batchModify.return_value = mock_batch_modify
 
         mark_important_background(["sender@example.com"], important=True)
 
@@ -110,7 +108,9 @@ class TestMarkImportantBackground:
         assert "marked as important" in status["message"]
 
         # Verify addLabelIds was used
-        call_args = mock_service.users.return_value.messages.return_value.batchModify.call_args
+        call_args = (
+            mock_service.users.return_value.messages.return_value.batchModify.call_args
+        )
         assert "addLabelIds" in call_args.kwargs["body"]
         assert "IMPORTANT" in call_args.kwargs["body"]["addLabelIds"]
 
@@ -131,9 +131,7 @@ class TestMarkImportantBackground:
 
         mock_batch_modify = Mock()
         mock_batch_modify.execute.return_value = {}
-        mock_service.users.return_value.messages.return_value.batchModify.return_value = (
-            mock_batch_modify
-        )
+        mock_service.users.return_value.messages.return_value.batchModify.return_value = mock_batch_modify
 
         mark_important_background(["sender@example.com"], important=False)
 
@@ -142,7 +140,9 @@ class TestMarkImportantBackground:
         assert "unmarked as important" in status["message"]
 
         # Verify removeLabelIds was used
-        call_args = mock_service.users.return_value.messages.return_value.batchModify.call_args
+        call_args = (
+            mock_service.users.return_value.messages.return_value.batchModify.call_args
+        )
         assert "removeLabelIds" in call_args.kwargs["body"]
         assert "IMPORTANT" in call_args.kwargs["body"]["removeLabelIds"]
 
@@ -163,9 +163,7 @@ class TestMarkImportantBackground:
 
         mock_batch_modify = Mock()
         mock_batch_modify.execute.return_value = {}
-        mock_service.users.return_value.messages.return_value.batchModify.return_value = (
-            mock_batch_modify
-        )
+        mock_service.users.return_value.messages.return_value.batchModify.return_value = mock_batch_modify
 
         mark_important_background(["sender1@example.com", "sender2@example.com"])
 
@@ -200,9 +198,7 @@ class TestMarkImportantBackground:
 
         mock_batch_modify = Mock()
         mock_batch_modify.execute.return_value = {}
-        mock_service.users.return_value.messages.return_value.batchModify.return_value = (
-            mock_batch_modify
-        )
+        mock_service.users.return_value.messages.return_value.batchModify.return_value = mock_batch_modify
 
         mark_important_background(["sender@example.com"])
 
@@ -227,14 +223,15 @@ class TestMarkImportantBackground:
 
         mock_batch_modify = Mock()
         mock_batch_modify.execute.return_value = {}
-        mock_service.users.return_value.messages.return_value.batchModify.return_value = (
-            mock_batch_modify
-        )
+        mock_service.users.return_value.messages.return_value.batchModify.return_value = mock_batch_modify
 
         mark_important_background(["sender@example.com"])
 
         # Should have called batchModify 3 times (100 + 100 + 50)
-        assert mock_service.users.return_value.messages.return_value.batchModify.call_count == 3
+        assert (
+            mock_service.users.return_value.messages.return_value.batchModify.call_count
+            == 3
+        )
 
     @patch("app.services.gmail.important.get_gmail_service")
     @patch("app.services.gmail.important.time.sleep")
@@ -253,9 +250,7 @@ class TestMarkImportantBackground:
 
         mock_batch_modify = Mock()
         mock_batch_modify.execute.return_value = {}
-        mock_service.users.return_value.messages.return_value.batchModify.return_value = (
-            mock_batch_modify
-        )
+        mock_service.users.return_value.messages.return_value.batchModify.return_value = mock_batch_modify
 
         mark_important_background(["sender@example.com"])
 
@@ -293,9 +288,7 @@ class TestMarkImportantBackground:
 
         mock_batch_modify = Mock()
         mock_batch_modify.execute.return_value = {}
-        mock_service.users.return_value.messages.return_value.batchModify.return_value = (
-            mock_batch_modify
-        )
+        mock_service.users.return_value.messages.return_value.batchModify.return_value = mock_batch_modify
 
         mark_important_background(["sender1@example.com", "sender2@example.com"])
 

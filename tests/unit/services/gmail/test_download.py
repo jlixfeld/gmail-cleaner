@@ -86,9 +86,9 @@ class TestDownloadEmailsBackground:
         mock_get_service.return_value = (mock_service, None)
 
         # Scan results with different sender
-        state.set_delete_scan_results([
-            {"email": "other@example.com", "message_ids": ["msg1", "msg2"]}
-        ])
+        state.set_delete_scan_results(
+            [{"email": "other@example.com", "message_ids": ["msg1", "msg2"]}]
+        )
 
         download_emails_background(["sender@example.com"])
 
@@ -104,9 +104,9 @@ class TestDownloadEmailsBackground:
         mock_get_service.return_value = (mock_service, None)
 
         # Set up scan results
-        state.set_delete_scan_results([
-            {"email": "sender@example.com", "message_ids": ["msg1", "msg2"]}
-        ])
+        state.set_delete_scan_results(
+            [{"email": "sender@example.com", "message_ids": ["msg1", "msg2"]}]
+        )
 
         # Mock batch request - must handle callback kwarg pattern
         callbacks = []
@@ -125,7 +125,10 @@ class TestDownloadEmailsBackground:
                         "headers": [
                             {"name": "From", "value": "Sender <sender@example.com>"},
                             {"name": "Subject", "value": "Test Subject 1"},
-                            {"name": "Date", "value": "Mon, 01 Jan 2024 10:00:00 +0000"},
+                            {
+                                "name": "Date",
+                                "value": "Mon, 01 Jan 2024 10:00:00 +0000",
+                            },
                         ],
                         "body": {"data": ""},
                     },
@@ -139,7 +142,10 @@ class TestDownloadEmailsBackground:
                         "headers": [
                             {"name": "From", "value": "sender@example.com"},
                             {"name": "Subject", "value": "Test Subject 2"},
-                            {"name": "Date", "value": "Tue, 02 Jan 2024 10:00:00 +0000"},
+                            {
+                                "name": "Date",
+                                "value": "Tue, 02 Jan 2024 10:00:00 +0000",
+                            },
                         ],
                         "body": {"data": ""},
                     },
@@ -176,10 +182,12 @@ class TestDownloadEmailsBackground:
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)
 
-        state.set_delete_scan_results([
-            {"email": "sender1@example.com", "message_ids": ["msg1"]},
-            {"email": "sender2@example.com", "message_ids": ["msg2"]},
-        ])
+        state.set_delete_scan_results(
+            [
+                {"email": "sender1@example.com", "message_ids": ["msg1"]},
+                {"email": "sender2@example.com", "message_ids": ["msg2"]},
+            ]
+        )
 
         def mock_new_batch():
             mock_batch = Mock()
@@ -190,13 +198,17 @@ class TestDownloadEmailsBackground:
 
             def execute():
                 for i, callback in enumerate(mock_batch._callbacks):
-                    callback(f"req{i}", {
-                        "id": f"msg{i+1}",
-                        "threadId": f"thread{i+1}",
-                        "snippet": f"Snippet {i+1}",
-                        "labelIds": [],
-                        "payload": {"headers": [], "body": {"data": ""}},
-                    }, None)
+                    callback(
+                        f"req{i}",
+                        {
+                            "id": f"msg{i + 1}",
+                            "threadId": f"thread{i + 1}",
+                            "snippet": f"Snippet {i + 1}",
+                            "labelIds": [],
+                            "payload": {"headers": [], "body": {"data": ""}},
+                        },
+                        None,
+                    )
 
             mock_batch.add = add_request
             mock_batch.execute = execute
@@ -216,9 +228,9 @@ class TestDownloadEmailsBackground:
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)
 
-        state.set_delete_scan_results([
-            {"email": "sender@example.com", "message_ids": ["msg1"]}
-        ])
+        state.set_delete_scan_results(
+            [{"email": "sender@example.com", "message_ids": ["msg1"]}]
+        )
 
         mock_service.new_batch_http_request.side_effect = Exception("API Error")
 
@@ -236,9 +248,14 @@ class TestDownloadEmailsBackground:
         mock_get_service.return_value = (mock_service, None)
 
         # Create many message IDs to trigger rate limiting
-        state.set_delete_scan_results([
-            {"email": "sender@example.com", "message_ids": [f"msg{i}" for i in range(300)]}
-        ])
+        state.set_delete_scan_results(
+            [
+                {
+                    "email": "sender@example.com",
+                    "message_ids": [f"msg{i}" for i in range(300)],
+                }
+            ]
+        )
 
         def mock_new_batch():
             mock_batch = Mock()
@@ -249,13 +266,17 @@ class TestDownloadEmailsBackground:
 
             def execute():
                 for i, callback in enumerate(mock_batch._callbacks):
-                    callback(f"req{i}", {
-                        "id": f"msg{i}",
-                        "threadId": f"thread{i}",
-                        "snippet": "",
-                        "labelIds": [],
-                        "payload": {"headers": [], "body": {"data": ""}},
-                    }, None)
+                    callback(
+                        f"req{i}",
+                        {
+                            "id": f"msg{i}",
+                            "threadId": f"thread{i}",
+                            "snippet": "",
+                            "labelIds": [],
+                            "payload": {"headers": [], "body": {"data": ""}},
+                        },
+                        None,
+                    )
 
             mock_batch.add = add_request
             mock_batch.execute = execute
@@ -276,11 +297,14 @@ class TestDownloadEmailsBackground:
         mock_get_service.return_value = (mock_service, None)
 
         import base64
-        body_content = base64.urlsafe_b64encode(b"Hello, this is the email body").decode()
 
-        state.set_delete_scan_results([
-            {"email": "sender@example.com", "message_ids": ["msg1"]}
-        ])
+        body_content = base64.urlsafe_b64encode(
+            b"Hello, this is the email body"
+        ).decode()
+
+        state.set_delete_scan_results(
+            [{"email": "sender@example.com", "message_ids": ["msg1"]}]
+        )
 
         def mock_new_batch():
             mock_batch = Mock()
@@ -291,16 +315,20 @@ class TestDownloadEmailsBackground:
 
             def execute():
                 callback = mock_batch._callbacks[0]
-                callback("req0", {
-                    "id": "msg1",
-                    "threadId": "thread1",
-                    "snippet": "",
-                    "labelIds": [],
-                    "payload": {
-                        "headers": [],
-                        "body": {"data": body_content},
+                callback(
+                    "req0",
+                    {
+                        "id": "msg1",
+                        "threadId": "thread1",
+                        "snippet": "",
+                        "labelIds": [],
+                        "payload": {
+                            "headers": [],
+                            "body": {"data": body_content},
+                        },
                     },
-                }, None)
+                    None,
+                )
 
             mock_batch.add = add_request
             mock_batch.execute = execute
@@ -321,11 +349,12 @@ class TestDownloadEmailsBackground:
         mock_get_service.return_value = (mock_service, None)
 
         import base64
+
         plain_body = base64.urlsafe_b64encode(b"Plain text body").decode()
 
-        state.set_delete_scan_results([
-            {"email": "sender@example.com", "message_ids": ["msg1"]}
-        ])
+        state.set_delete_scan_results(
+            [{"email": "sender@example.com", "message_ids": ["msg1"]}]
+        )
 
         def mock_new_batch():
             mock_batch = Mock()
@@ -336,25 +365,33 @@ class TestDownloadEmailsBackground:
 
             def execute():
                 callback = mock_batch._callbacks[0]
-                callback("req0", {
-                    "id": "msg1",
-                    "threadId": "thread1",
-                    "snippet": "",
-                    "labelIds": [],
-                    "payload": {
-                        "headers": [],
-                        "parts": [
-                            {
-                                "mimeType": "text/plain",
-                                "body": {"data": plain_body},
-                            },
-                            {
-                                "mimeType": "text/html",
-                                "body": {"data": base64.urlsafe_b64encode(b"<html>HTML body</html>").decode()},
-                            },
-                        ],
+                callback(
+                    "req0",
+                    {
+                        "id": "msg1",
+                        "threadId": "thread1",
+                        "snippet": "",
+                        "labelIds": [],
+                        "payload": {
+                            "headers": [],
+                            "parts": [
+                                {
+                                    "mimeType": "text/plain",
+                                    "body": {"data": plain_body},
+                                },
+                                {
+                                    "mimeType": "text/html",
+                                    "body": {
+                                        "data": base64.urlsafe_b64encode(
+                                            b"<html>HTML body</html>"
+                                        ).decode()
+                                    },
+                                },
+                            ],
+                        },
                     },
-                }, None)
+                    None,
+                )
 
             mock_batch.add = add_request
             mock_batch.execute = execute

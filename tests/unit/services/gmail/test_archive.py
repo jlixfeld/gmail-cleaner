@@ -99,9 +99,7 @@ class TestArchiveEmailsBackground:
         # Mock batchModify
         mock_batch_modify = Mock()
         mock_batch_modify.execute.return_value = {}
-        mock_service.users.return_value.messages.return_value.batchModify.return_value = (
-            mock_batch_modify
-        )
+        mock_service.users.return_value.messages.return_value.batchModify.return_value = mock_batch_modify
 
         archive_emails_background(["sender@example.com"])
 
@@ -129,9 +127,7 @@ class TestArchiveEmailsBackground:
 
         mock_batch_modify = Mock()
         mock_batch_modify.execute.return_value = {}
-        mock_service.users.return_value.messages.return_value.batchModify.return_value = (
-            mock_batch_modify
-        )
+        mock_service.users.return_value.messages.return_value.batchModify.return_value = mock_batch_modify
 
         archive_emails_background(["sender1@example.com", "sender2@example.com"])
 
@@ -168,9 +164,7 @@ class TestArchiveEmailsBackground:
 
         mock_batch_modify = Mock()
         mock_batch_modify.execute.return_value = {}
-        mock_service.users.return_value.messages.return_value.batchModify.return_value = (
-            mock_batch_modify
-        )
+        mock_service.users.return_value.messages.return_value.batchModify.return_value = mock_batch_modify
 
         archive_emails_background(["sender@example.com"])
 
@@ -196,14 +190,15 @@ class TestArchiveEmailsBackground:
 
         mock_batch_modify = Mock()
         mock_batch_modify.execute.return_value = {}
-        mock_service.users.return_value.messages.return_value.batchModify.return_value = (
-            mock_batch_modify
-        )
+        mock_service.users.return_value.messages.return_value.batchModify.return_value = mock_batch_modify
 
         archive_emails_background(["sender@example.com"])
 
         # Should have called batchModify 3 times (100 + 100 + 50)
-        assert mock_service.users.return_value.messages.return_value.batchModify.call_count == 3
+        assert (
+            mock_service.users.return_value.messages.return_value.batchModify.call_count
+            == 3
+        )
 
     @patch("app.services.gmail.archive.get_gmail_service")
     @patch("app.services.gmail.archive.time.sleep")
@@ -223,9 +218,7 @@ class TestArchiveEmailsBackground:
 
         mock_batch_modify = Mock()
         mock_batch_modify.execute.return_value = {}
-        mock_service.users.return_value.messages.return_value.batchModify.return_value = (
-            mock_batch_modify
-        )
+        mock_service.users.return_value.messages.return_value.batchModify.return_value = mock_batch_modify
 
         archive_emails_background(["sender@example.com"])
 
@@ -280,18 +273,14 @@ class TestArchiveEmailsBackground:
         mock_get_service.return_value = (mock_service, None)
 
         mock_list = Mock()
-        mock_list.execute.return_value = {
-            "messages": [{"id": "msg1"}]
-        }
+        mock_list.execute.return_value = {"messages": [{"id": "msg1"}]}
         mock_service.users.return_value.messages.return_value.list.return_value = (
             mock_list
         )
 
         mock_batch_modify = Mock()
         mock_batch_modify.execute.return_value = {}
-        mock_service.users.return_value.messages.return_value.batchModify.return_value = (
-            mock_batch_modify
-        )
+        mock_service.users.return_value.messages.return_value.batchModify.return_value = mock_batch_modify
 
         archive_emails_background(["sender1@example.com", "sender2@example.com"])
 

@@ -4,8 +4,6 @@ Gmail Archive Operations
 Functions for archiving emails (removing from inbox).
 """
 
-import time
-
 from app.core import state
 from app.services.auth import get_gmail_service
 from app.services.gmail.helpers import sanitize_gmail_query_value
@@ -71,10 +69,6 @@ def archive_emails_background(senders: list[str]):
                 ).execute()
                 total_archived += len(batch_ids)
 
-                # Throttle every 500 emails (check at 100, 600, 1100, etc.)
-                if (j + 100) % 500 == 0:
-                    time.sleep(0.5)
-
         state.update_archive_status(
             progress=100,
             done=True,
@@ -83,9 +77,7 @@ def archive_emails_background(senders: list[str]):
         )
 
     except Exception as e:
-        state.update_archive_status(
-            error=f"{e!s}", done=True, message=f"Error: {e!s}"
-        )
+        state.update_archive_status(error=f"{e!s}", done=True, message=f"Error: {e!s}")
 
 
 def get_archive_status() -> dict:

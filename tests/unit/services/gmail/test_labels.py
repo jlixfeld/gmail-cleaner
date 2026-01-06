@@ -300,9 +300,7 @@ class TestApplyLabelToSendersBackground:
 
         mock_batch_modify = Mock()
         mock_batch_modify.execute.return_value = {}
-        mock_service.users.return_value.messages.return_value.batchModify.return_value = (
-            mock_batch_modify
-        )
+        mock_service.users.return_value.messages.return_value.batchModify.return_value = mock_batch_modify
 
         apply_label_to_senders_background("Label_123", ["sender@example.com"])
 
@@ -313,7 +311,9 @@ class TestApplyLabelToSendersBackground:
         assert "labeled" in status["message"].lower()
 
         # Verify addLabelIds was used
-        call_args = mock_service.users.return_value.messages.return_value.batchModify.call_args
+        call_args = (
+            mock_service.users.return_value.messages.return_value.batchModify.call_args
+        )
         assert "addLabelIds" in call_args.kwargs["body"]
 
     @patch("app.services.gmail.labels.get_gmail_service")
@@ -338,9 +338,7 @@ class TestApplyLabelToSendersBackground:
 
         mock_batch_modify = Mock()
         mock_batch_modify.execute.return_value = {}
-        mock_service.users.return_value.messages.return_value.batchModify.return_value = (
-            mock_batch_modify
-        )
+        mock_service.users.return_value.messages.return_value.batchModify.return_value = mock_batch_modify
 
         apply_label_to_senders_background("Label_123", ["sender@example.com"])
 
@@ -397,9 +395,7 @@ class TestRemoveLabelFromSendersBackground:
 
         mock_batch_modify = Mock()
         mock_batch_modify.execute.return_value = {}
-        mock_service.users.return_value.messages.return_value.batchModify.return_value = (
-            mock_batch_modify
-        )
+        mock_service.users.return_value.messages.return_value.batchModify.return_value = mock_batch_modify
 
         remove_label_from_senders_background("Label_123", ["sender@example.com"])
 
@@ -407,10 +403,15 @@ class TestRemoveLabelFromSendersBackground:
         assert status["done"] is True
         assert status["error"] is None
         assert status["affected_count"] == 3
-        assert "removed" in status["message"].lower() or "unlabeled" in status["message"].lower()
+        assert (
+            "removed" in status["message"].lower()
+            or "unlabeled" in status["message"].lower()
+        )
 
         # Verify removeLabelIds was used
-        call_args = mock_service.users.return_value.messages.return_value.batchModify.call_args
+        call_args = (
+            mock_service.users.return_value.messages.return_value.batchModify.call_args
+        )
         assert "removeLabelIds" in call_args.kwargs["body"]
 
     @patch("app.services.gmail.labels.get_gmail_service")

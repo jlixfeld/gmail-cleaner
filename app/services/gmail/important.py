@@ -4,8 +4,6 @@ Gmail Mark Important Operations
 Functions for marking/unmarking emails as important.
 """
 
-import time
-
 from app.core import state
 from app.services.auth import get_gmail_service
 from app.services.gmail.helpers import sanitize_gmail_query_value
@@ -75,10 +73,6 @@ def mark_important_background(senders: list[str], *, important: bool = True) -> 
                 )
                 service.users().messages().batchModify(userId="me", body=body).execute()
                 total_affected += len(batch_ids)
-
-                # Throttle every 500 emails (use cumulative count across all senders)
-                if total_affected > 0 and total_affected % 500 == 0:
-                    time.sleep(0.5)
 
         action_done = "marked as important" if important else "unmarked as important"
         state.update_important_status(

@@ -249,7 +249,9 @@ def _apply_label_operation_background(
             state.update_label_operation_status(
                 affected_count=affected,
                 progress=progress,
-                message=progress_message_template.format(count=affected, total=total_emails),
+                message=progress_message_template.format(
+                    count=affected, total=total_emails
+                ),
             )
     except Exception as e:
         errors.append(f"Batch operation error: {e!s}")

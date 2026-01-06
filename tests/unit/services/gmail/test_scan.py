@@ -74,9 +74,7 @@ class TestScanEmails:
 
         # Mock list to return message IDs
         mock_list = Mock()
-        mock_list.execute.return_value = {
-            "messages": [{"id": "msg1"}, {"id": "msg2"}]
-        }
+        mock_list.execute.return_value = {"messages": [{"id": "msg1"}, {"id": "msg2"}]}
         mock_service.users.return_value.messages.return_value.list.return_value = (
             mock_list
         )
@@ -97,10 +95,19 @@ class TestScanEmails:
                         "id": "msg1",
                         "payload": {
                             "headers": [
-                                {"name": "From", "value": "Newsletter <news@domain1.com>"},
+                                {
+                                    "name": "From",
+                                    "value": "Newsletter <news@domain1.com>",
+                                },
                                 {"name": "Subject", "value": "Test Newsletter 1"},
-                                {"name": "Date", "value": "Mon, 01 Jan 2024 10:00:00 +0000"},
-                                {"name": "List-Unsubscribe", "value": "<https://domain1.com/unsub>"},
+                                {
+                                    "name": "Date",
+                                    "value": "Mon, 01 Jan 2024 10:00:00 +0000",
+                                },
+                                {
+                                    "name": "List-Unsubscribe",
+                                    "value": "<https://domain1.com/unsub>",
+                                },
                             ]
                         },
                     },
@@ -108,10 +115,19 @@ class TestScanEmails:
                         "id": "msg2",
                         "payload": {
                             "headers": [
-                                {"name": "From", "value": "Alerts <alerts@domain2.com>"},
+                                {
+                                    "name": "From",
+                                    "value": "Alerts <alerts@domain2.com>",
+                                },
                                 {"name": "Subject", "value": "Test Alert"},
-                                {"name": "Date", "value": "Mon, 01 Jan 2024 11:00:00 +0000"},
-                                {"name": "List-Unsubscribe", "value": "<https://domain2.com/unsub>"},
+                                {
+                                    "name": "Date",
+                                    "value": "Mon, 01 Jan 2024 11:00:00 +0000",
+                                },
+                                {
+                                    "name": "List-Unsubscribe",
+                                    "value": "<https://domain2.com/unsub>",
+                                },
                             ]
                         },
                     },
@@ -163,7 +179,10 @@ class TestScanEmails:
                         "payload": {
                             "headers": [
                                 {"name": "From", "value": "news@example.com"},
-                                {"name": "List-Unsubscribe", "value": "<https://example.com/unsub>"},
+                                {
+                                    "name": "List-Unsubscribe",
+                                    "value": "<https://example.com/unsub>",
+                                },
                             ]
                         },
                     },
@@ -172,7 +191,10 @@ class TestScanEmails:
                         "payload": {
                             "headers": [
                                 {"name": "From", "value": "updates@example.com"},
-                                {"name": "List-Unsubscribe", "value": "<https://example.com/unsub>"},
+                                {
+                                    "name": "List-Unsubscribe",
+                                    "value": "<https://example.com/unsub>",
+                                },
                             ]
                         },
                     },
@@ -181,7 +203,10 @@ class TestScanEmails:
                         "payload": {
                             "headers": [
                                 {"name": "From", "value": "alerts@other.com"},
-                                {"name": "List-Unsubscribe", "value": "<https://other.com/unsub>"},
+                                {
+                                    "name": "List-Unsubscribe",
+                                    "value": "<https://other.com/unsub>",
+                                },
                             ]
                         },
                     },
@@ -199,12 +224,111 @@ class TestScanEmails:
         results = get_scan_results()
         domains = [r["domain"] for r in results]
 
-        assert "example.com" in domains
-        assert "other.com" in domains
+        # Now groups by sender email (not domain) when no List-Id
+        assert "news@example.com" in domains
+        assert "updates@example.com" in domains
+        assert "alerts@other.com" in domains
 
-        # example.com should have count of 2
-        example_result = next(r for r in results if r["domain"] == "example.com")
-        assert example_result["count"] == 2
+        # Each sender is now its own group with count of 1
+        news_result = next(r for r in results if r["domain"] == "news@example.com")
+        assert news_result["count"] == 1
+
+    @patch("app.services.gmail.scan.get_gmail_service")
+    def test_scan_groups_by_list_id(self, mock_get_service):
+        """Emails with same List-Id should be grouped together."""
+        mock_service = Mock()
+        mock_get_service.return_value = (mock_service, None)
+
+        mock_list = Mock()
+        mock_list.execute.return_value = {
+            "messages": [{"id": "msg1"}, {"id": "msg2"}, {"id": "msg3"}]
+        }
+        mock_service.users.return_value.messages.return_value.list.return_value = (
+            mock_list
+        )
+
+        def mock_new_batch(callback):
+            mock_batch = Mock()
+
+            def mock_execute():
+                # Two emails from different senders but same List-Id
+                responses = [
+                    {
+                        "id": "msg1",
+                        "payload": {
+                            "headers": [
+                                {"name": "From", "value": "Alice <alice@foo.com>"},
+                                {
+                                    "name": "List-Unsubscribe",
+                                    "value": "<https://list.example.com/unsub>",
+                                },
+                                {
+                                    "name": "List-Id",
+                                    "value": "<newsletter.example.com>",
+                                },
+                            ]
+                        },
+                    },
+                    {
+                        "id": "msg2",
+                        "payload": {
+                            "headers": [
+                                {"name": "From", "value": "Bob <bob@bar.com>"},
+                                {
+                                    "name": "List-Unsubscribe",
+                                    "value": "<https://list.example.com/unsub>",
+                                },
+                                {
+                                    "name": "List-Id",
+                                    "value": "<newsletter.example.com>",
+                                },
+                            ]
+                        },
+                    },
+                    {
+                        "id": "msg3",
+                        "payload": {
+                            "headers": [
+                                {"name": "From", "value": "alerts@other.com"},
+                                {
+                                    "name": "List-Unsubscribe",
+                                    "value": "<https://other.com/unsub>",
+                                },
+                            ]
+                        },
+                    },
+                ]
+                for i, resp in enumerate(responses):
+                    callback(f"req{i}", resp, None)
+
+            mock_batch.execute = mock_execute
+            return mock_batch
+
+        mock_service.new_batch_http_request = mock_new_batch
+
+        scan_emails(limit=10)
+
+        results = get_scan_results()
+
+        # Should have 2 groups: one for List-Id, one for sender email
+        assert len(results) == 2
+
+        # Find List-Id grouped result
+        list_result = next(
+            (r for r in results if r["list_id"] == "newsletter.example.com"), None
+        )
+        assert list_result is not None
+        assert list_result["domain"] == "newsletter.example.com"
+        assert list_result["count"] == 2
+        assert len(list_result["senders"]) == 2
+
+        # Other result should not have list_id
+        other_result = next(
+            (r for r in results if r["domain"] == "alerts@other.com"), None
+        )
+        assert other_result is not None
+        assert other_result["list_id"] is None
+        assert other_result["count"] == 1
 
     @patch("app.services.gmail.scan.get_gmail_service")
     def test_exception_handling(self, mock_get_service):

@@ -45,7 +45,7 @@ class TestScanEndpoint:
 
     def test_scan_with_invalid_limit(self, client):
         """POST /api/scan with invalid limit should fail validation."""
-        response = client.post("/api/scan", json={"limit": 0})
+        response = client.post("/api/scan", json={"limit": -1})
         assert response.status_code == 422  # Validation error
 
     def test_scan_with_invalid_filters(self, client):
@@ -160,7 +160,7 @@ class TestDeleteEmailsEndpoint:
             "/api/delete-emails", json={"sender": "newsletter@example.com"}
         )
         assert response.status_code == 200
-        mock_delete.assert_called_once_with("newsletter@example.com")
+        mock_delete.assert_called_once_with("newsletter@example.com", None)
 
 
 class TestDeleteBulkEndpoint:

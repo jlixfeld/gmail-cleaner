@@ -35,6 +35,7 @@ def _parse_email_date(date_str: str | None) -> datetime | None:
     except (ValueError, TypeError):
         return None
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -228,7 +229,9 @@ def mark_read_by_senders_background(senders: list[str]) -> None:
 
     Uses batchModify with removeLabelIds: ["UNREAD"]
     """
-    _process_unread_action(senders, action_name="mark as read", remove_labels=["UNREAD"])
+    _process_unread_action(
+        senders, action_name="mark as read", remove_labels=["UNREAD"]
+    )
 
 
 def mark_read_and_archive_by_senders_background(senders: list[str]) -> None:
@@ -237,7 +240,9 @@ def mark_read_and_archive_by_senders_background(senders: list[str]) -> None:
     Uses batchModify with removeLabelIds: ["UNREAD", "INBOX"]
     """
     _process_unread_action(
-        senders, action_name="mark as read and archive", remove_labels=["UNREAD", "INBOX"]
+        senders,
+        action_name="mark as read and archive",
+        remove_labels=["UNREAD", "INBOX"],
     )
 
 

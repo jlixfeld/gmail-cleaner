@@ -145,9 +145,7 @@ class TestMarkEmailsAsRead:
         # Mock batchModify
         mock_batch_modify = Mock()
         mock_batch_modify.execute.return_value = {}
-        mock_service.users.return_value.messages.return_value.batchModify.return_value = (
-            mock_batch_modify
-        )
+        mock_service.users.return_value.messages.return_value.batchModify.return_value = mock_batch_modify
 
         mark_emails_as_read(count=10)
 
@@ -183,9 +181,7 @@ class TestMarkEmailsAsRead:
 
         mock_batch_modify = Mock()
         mock_batch_modify.execute.return_value = {}
-        mock_service.users.return_value.messages.return_value.batchModify.return_value = (
-            mock_batch_modify
-        )
+        mock_service.users.return_value.messages.return_value.batchModify.return_value = mock_batch_modify
 
         mark_emails_as_read(count=0)
 
@@ -211,9 +207,7 @@ class TestMarkEmailsAsRead:
 
         mock_batch_modify = Mock()
         mock_batch_modify.execute.return_value = {}
-        mock_service.users.return_value.messages.return_value.batchModify.return_value = (
-            mock_batch_modify
-        )
+        mock_service.users.return_value.messages.return_value.batchModify.return_value = mock_batch_modify
 
         mark_emails_as_read(count=10)
 
@@ -275,14 +269,15 @@ class TestMarkEmailsAsRead:
 
         mock_batch_modify = Mock()
         mock_batch_modify.execute.return_value = {}
-        mock_service.users.return_value.messages.return_value.batchModify.return_value = (
-            mock_batch_modify
-        )
+        mock_service.users.return_value.messages.return_value.batchModify.return_value = mock_batch_modify
 
         mark_emails_as_read(count=250)
 
         # Should have called batchModify 3 times (100 + 100 + 50)
-        assert mock_service.users.return_value.messages.return_value.batchModify.call_count == 3
+        assert (
+            mock_service.users.return_value.messages.return_value.batchModify.call_count
+            == 3
+        )
 
 
 class TestGetMarkReadStatus:

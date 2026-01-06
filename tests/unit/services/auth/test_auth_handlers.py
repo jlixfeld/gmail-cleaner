@@ -7,9 +7,7 @@ Tests for auth_handlers.py - OAuth2 callback processing.
 import io
 from threading import Event, Lock
 from typing import Optional
-from unittest.mock import Mock, patch, MagicMock, PropertyMock
-
-import pytest
+from unittest.mock import Mock, patch
 
 
 def create_mock_handler(
@@ -30,7 +28,9 @@ def create_mock_handler(
 
     # We need to patch the handler's initialization since BaseHTTPRequestHandler
     # tries to handle the request immediately in __init__
-    with patch.object(OAuthCallbackHandler, '__init__', lambda self, *args, **kwargs: None):
+    with patch.object(
+        OAuthCallbackHandler, "__init__", lambda self, *args, **kwargs: None
+    ):
         handler = OAuthCallbackHandler.__new__(OAuthCallbackHandler)
 
     # Set up the handler attributes manually

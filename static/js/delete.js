@@ -5,6 +5,10 @@
 window.GmailCleaner = window.GmailCleaner || {};
 
 GmailCleaner.Delete = {
+    // Unknown senders state
+    knownSendersCached: false,
+    buildingKnownSenders: false,
+
     formatDateRange(firstDate, lastDate) {
         /**
          * Parse RFC 2822 date string and format as MM/DD/YYYY
@@ -52,6 +56,16 @@ GmailCleaner.Delete = {
             return;
         }
 
+        // Check if filter toggle is enabled
+        const filterToggle = document.getElementById('filterKnownSendersToggle');
+        const filterEnabled = filterToggle && filterToggle.checked;
+
+        // If filter is enabled but no cache exists, show error
+        if (filterEnabled && !this.knownSendersCached) {
+            alert('Please run "Scan Known Senders" first to build the known senders cache before filtering.');
+            return;
+        }
+
         GmailCleaner.deleteScanning = true;
 
         const scanBtn = document.getElementById('deleteScanBtn');
@@ -69,8 +83,11 @@ GmailCleaner.Delete = {
         const limit = getLimitValue('deleteScanLimit');
         const filters = GmailCleaner.Filters.get();
 
+        // Choose endpoint based on filter toggle state
+        const endpoint = filterEnabled ? '/api/delete-scan-unknown' : '/api/delete-scan';
+
         try {
-            const response = await fetch('/api/delete-scan', {
+            const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -130,6 +147,8 @@ GmailCleaner.Delete = {
             </svg>
             Scan Senders
         `;
+        // Also reset known senders button if it exists
+        this.resetKnownSendersScan();
     },
 
     displayResults() {
@@ -323,12 +342,15 @@ GmailCleaner.Delete = {
 
             if (status.done) {
                 this.hideDeleteOverlay();
+                console.log('[BulkDelete] Done. Status:', JSON.stringify(status));
+                console.log('[BulkDelete] Checkboxes count:', checkboxes.length);
 
                 if (!status.error) {
                     const deletedCount = status.deleted_count || 0;
                     checkboxes.forEach(cb => {
                         const index = parseInt(cb.dataset.index);
                         const btn = document.getElementById('delete-' + index);
+                        console.log(`[BulkDelete] Updating button delete-${index}: btn found =`, !!btn);
                         if (btn) {
                             btn.classList.remove('btn-deleting');
                             btn.innerHTML = '✓ Deleted!';
@@ -339,12 +361,15 @@ GmailCleaner.Delete = {
                     GmailCleaner.UI.showSuccessToast(`Deleted ${deletedCount.toLocaleString()} emails from ${checkboxes.length} senders`);
 
                     setTimeout(async () => {
+                        console.log('[BulkDelete] Refreshing results...');
                         const resultsResponse = await fetch('/api/delete-scan-results');
                         GmailCleaner.deleteResults = await resultsResponse.json();
+                        console.log('[BulkDelete] New results count:', GmailCleaner.deleteResults.length);
                         this.displayResults();
                         document.getElementById('deleteSelectAll').checked = false;
                     }, 1000);
                 } else {
+                    console.log('[BulkDelete] Error path:', status.error);
                     alert('Error: ' + status.error);
                     checkboxes.forEach(cb => {
                         const index = parseInt(cb.dataset.index);
@@ -417,6 +442,144 @@ GmailCleaner.Delete = {
         const overlay = document.getElementById('deleteOverlay');
         if (overlay) {
             overlay.remove();
+        }
+    },
+
+    // Known senders cache functionality
+    async startKnownSendersScan() {
+        if (this.buildingKnownSenders) return;
+
+        const authResponse = await fetch('/api/auth-status');
+        const authStatus = await authResponse.json();
+
+        if (!authStatus.logged_in) {
+            GmailCleaner.Auth.signIn();
+            return;
+        }
+
+        // Build the known senders cache
+        await this.buildKnownSenders();
+    },
+
+    async buildKnownSenders() {
+        this.buildingKnownSenders = true;
+
+        // Get limit from text input (0 = scan all)
+        const limit = getLimitValue('sentScanLimit');
+
+        // Show building overlay
+        this.showKnownSendersOverlay();
+
+        try {
+            const response = await fetch('/api/build-known-senders', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ limit: limit })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.detail || 'Failed to start building known senders');
+            }
+
+            // Poll for progress
+            await this.pollKnownSendersProgress();
+        } catch (error) {
+            this.hideKnownSendersOverlay();
+            this.buildingKnownSenders = false;
+            alert('Error building known senders: ' + error.message);
+        }
+    },
+
+    async pollKnownSendersProgress() {
+        try {
+            const response = await fetch('/api/known-senders-status');
+            const status = await response.json();
+
+            this.updateKnownSendersOverlay(status);
+
+            if (status.done) {
+                this.hideKnownSendersOverlay();
+                this.buildingKnownSenders = false;
+
+                if (!status.error) {
+                    this.knownSendersCached = true;
+                    this.updateKnownSendersStatusText(status.sender_count);
+                } else {
+                    alert('Error: ' + status.error);
+                }
+            } else {
+                setTimeout(() => this.pollKnownSendersProgress(), 300);
+            }
+        } catch (error) {
+            setTimeout(() => this.pollKnownSendersProgress(), 500);
+        }
+    },
+
+    showKnownSendersOverlay() {
+        this.hideKnownSendersOverlay();
+
+        const overlay = document.createElement('div');
+        overlay.id = 'knownSendersOverlay';
+        overlay.className = 'delete-overlay';
+        overlay.innerHTML = `
+            <div class="delete-overlay-content">
+                <svg class="delete-overlay-spinner spinner" viewBox="0 0 24 24">
+                    <circle cx="12" cy="12" r="10" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-dasharray="60" stroke-linecap="round"/>
+                </svg>
+                <h3>Building Known Senders Cache...</h3>
+                <div class="delete-progress-container">
+                    <div class="delete-progress-bar" id="knownSendersProgressBar" style="background: #8b5cf6;"></div>
+                </div>
+                <p id="knownSendersProgressText">Scanning sent emails...</p>
+                <p class="delete-stats" id="knownSendersStats">0 contacts found</p>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+    },
+
+    updateKnownSendersOverlay(status) {
+        const progressBar = document.getElementById('knownSendersProgressBar');
+        const progressText = document.getElementById('knownSendersProgressText');
+        const stats = document.getElementById('knownSendersStats');
+
+        if (progressBar) {
+            progressBar.style.width = status.progress + '%';
+        }
+        if (progressText) {
+            progressText.textContent = status.message;
+        }
+        if (stats) {
+            stats.textContent = `${status.sender_count || 0} contacts found from ${status.scanned_emails || 0} emails`;
+        }
+    },
+
+    hideKnownSendersOverlay() {
+        const overlay = document.getElementById('knownSendersOverlay');
+        if (overlay) {
+            overlay.remove();
+        }
+    },
+
+    updateKnownSendersStatusText(count) {
+        const statusText = document.getElementById('knownSendersStatusText');
+        if (statusText) {
+            statusText.textContent = `Known senders: ${count.toLocaleString()} contacts cached`;
+            statusText.classList.add('cached');
+        }
+    },
+
+    resetKnownSendersScan() {
+        this.buildingKnownSenders = false;
+        const scanBtn = document.getElementById('deleteUnknownBtn');
+        if (scanBtn) {
+            scanBtn.disabled = false;
+            scanBtn.innerHTML = `
+                <svg viewBox="0 0 24 24" width="18" height="18">
+                    <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                </svg>
+                Scan Known Senders
+            `;
         }
     },
 
@@ -540,6 +703,7 @@ GmailCleaner.Delete = {
 
 // Global shortcuts
 function startDeleteScan() { GmailCleaner.Delete.startScan(); }
+function startKnownSendersScan() { GmailCleaner.Delete.startKnownSendersScan(); }
 function toggleDeleteSelectAll() { GmailCleaner.Delete.toggleSelectAll(); }
 function deleteSelectedSenders() { GmailCleaner.Delete.deleteSelected(); }
 function downloadSelectedEmails() { GmailCleaner.Delete.downloadSelected(); }

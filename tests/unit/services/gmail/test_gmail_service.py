@@ -348,7 +348,10 @@ class TestSenderEmailForDeletion:
     def test_extracted_email_usable_in_gmail_query(self):
         """Extracted email should be usable in from: query."""
         headers = [
-            {"name": "From", "value": "Marketing Team <marketing@newsletter.example.com>"},
+            {
+                "name": "From",
+                "value": "Marketing Team <marketing@newsletter.example.com>",
+            },
         ]
         _name, email = _get_sender_info(headers)
         query = f"from:{email}"
@@ -359,7 +362,7 @@ class TestSenderEmailForDeletion:
         """Verify sender filter query is correctly constructed."""
         filters = {"sender": "newsletter@example.com"}
         query = build_gmail_query(filters)
-        assert query == "from:newsletter@example.com"
+        assert query == 'from:"newsletter@example.com"'
 
     def test_email_with_subdomain_extracts_correctly(self):
         """Email with subdomain should extract correctly."""

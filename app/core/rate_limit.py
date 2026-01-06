@@ -21,14 +21,10 @@ limiter = Limiter(
 )
 
 # Rate limit configurations for different endpoint types
-# Status endpoints: Higher limit for frequent polling (e.g., progress updates)
-STATUS_RATE_LIMIT = "120/minute"
+# For a local single-user tool, these are set very high to avoid self-blocking.
+# Google's API has its own rate limits which are generous for single users.
 
-# Action endpoints: Lower limit for write operations
-ACTION_RATE_LIMIT = "30/minute"
-
-# Auth endpoints: Moderate limit
-AUTH_RATE_LIMIT = "10/minute"
-
-# Scan/delete operations: Very limited (heavy operations)
-HEAVY_OPERATION_RATE_LIMIT = "10/minute"
+STATUS_RATE_LIMIT = "6000/minute"
+ACTION_RATE_LIMIT = "600/minute"
+AUTH_RATE_LIMIT = "300/minute"
+HEAVY_OPERATION_RATE_LIMIT = "600/minute"

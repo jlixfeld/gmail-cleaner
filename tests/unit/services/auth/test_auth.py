@@ -4,9 +4,7 @@ Tests for Authentication Service
 Tests for auth.py - OAuth2 authentication with Gmail API.
 """
 
-import json
-import os
-from unittest.mock import Mock, patch, mock_open, MagicMock
+from unittest.mock import Mock, patch, mock_open
 
 import pytest
 
@@ -25,6 +23,7 @@ def reset_state():
 def reset_auth_progress():
     """Reset auth in progress flag."""
     from app.services import auth
+
     auth._auth_in_progress["active"] = False
     yield
     auth._auth_in_progress["active"] = False
@@ -119,7 +118,9 @@ class TestNeedsAuthSetup:
     @patch("app.services.auth._is_file_empty")
     @patch("os.path.exists")
     @patch("os.remove")
-    def test_empty_token_file(self, mock_remove, mock_exists, mock_is_empty, mock_settings):
+    def test_empty_token_file(
+        self, mock_remove, mock_exists, mock_is_empty, mock_settings
+    ):
         """Empty token file should return True and be removed."""
         from app.services.auth import needs_auth_setup
 
@@ -134,7 +135,9 @@ class TestNeedsAuthSetup:
     @patch("app.services.auth._is_file_empty")
     @patch("os.path.exists")
     @patch("app.services.auth.Credentials")
-    def test_valid_credentials(self, mock_creds_class, mock_exists, mock_is_empty, mock_settings):
+    def test_valid_credentials(
+        self, mock_creds_class, mock_exists, mock_is_empty, mock_settings
+    ):
         """Valid credentials should return False."""
         from app.services.auth import needs_auth_setup
 
@@ -154,7 +157,9 @@ class TestNeedsAuthSetup:
     @patch("app.services.auth._is_file_empty")
     @patch("os.path.exists")
     @patch("app.services.auth.Credentials")
-    def test_expired_with_refresh_token(self, mock_creds_class, mock_exists, mock_is_empty, mock_settings):
+    def test_expired_with_refresh_token(
+        self, mock_creds_class, mock_exists, mock_is_empty, mock_settings
+    ):
         """Expired credentials with refresh token should return False."""
         from app.services.auth import needs_auth_setup
 
@@ -174,7 +179,9 @@ class TestNeedsAuthSetup:
     @patch("app.services.auth._is_file_empty")
     @patch("os.path.exists")
     @patch("app.services.auth.Credentials")
-    def test_corrupted_token_file(self, mock_creds_class, mock_exists, mock_is_empty, mock_settings):
+    def test_corrupted_token_file(
+        self, mock_creds_class, mock_exists, mock_is_empty, mock_settings
+    ):
         """Corrupted token file should return True."""
         from app.services.auth import needs_auth_setup
 
@@ -183,7 +190,9 @@ class TestNeedsAuthSetup:
         mock_exists.return_value = True
         mock_is_empty.return_value = False
 
-        mock_creds_class.from_authorized_user_file.side_effect = ValueError("Invalid JSON")
+        mock_creds_class.from_authorized_user_file.side_effect = ValueError(
+            "Invalid JSON"
+        )
 
         assert needs_auth_setup() is True
 
@@ -195,7 +204,9 @@ class TestGetWebAuthStatus:
     @patch("app.services.auth.is_web_auth_mode")
     @patch("app.services.auth.settings")
     @patch("os.path.exists")
-    def test_returns_status_dict(self, mock_exists, mock_settings, mock_web_mode, mock_needs_setup):
+    def test_returns_status_dict(
+        self, mock_exists, mock_settings, mock_web_mode, mock_needs_setup
+    ):
         """Should return complete status dictionary."""
         from app.services.auth import get_web_auth_status
 
@@ -372,7 +383,9 @@ class TestGetGmailService:
     @patch("os.path.exists")
     @patch("app.services.auth.Credentials")
     @patch("app.services.auth.build")
-    def test_valid_credentials(self, mock_build, mock_creds_class, mock_exists, mock_is_empty, mock_settings):
+    def test_valid_credentials(
+        self, mock_build, mock_creds_class, mock_exists, mock_is_empty, mock_settings
+    ):
         """Valid credentials should return service."""
         from app.services.auth import get_gmail_service
 
@@ -400,7 +413,14 @@ class TestGetGmailService:
     @patch("app.services.auth._is_file_empty")
     @patch("os.path.exists")
     @patch("app.services.auth._get_credentials_path")
-    def test_no_credentials(self, mock_get_creds_path, mock_exists, mock_is_empty, mock_settings, reset_auth_progress):
+    def test_no_credentials(
+        self,
+        mock_get_creds_path,
+        mock_exists,
+        mock_is_empty,
+        mock_settings,
+        reset_auth_progress,
+    ):
         """Missing credentials should return error."""
         from app.services.auth import get_gmail_service
 
@@ -422,7 +442,13 @@ class TestGetGmailService:
     @patch("app.services.auth._try_refresh_creds")
     @patch("app.services.auth.build")
     def test_expired_credentials_refreshed(
-        self, mock_build, mock_refresh, mock_creds_class, mock_exists, mock_is_empty, mock_settings
+        self,
+        mock_build,
+        mock_refresh,
+        mock_creds_class,
+        mock_exists,
+        mock_is_empty,
+        mock_settings,
     ):
         """Expired credentials should be refreshed."""
         from app.services.auth import get_gmail_service
@@ -476,7 +502,9 @@ class TestGetGmailService:
     @patch("os.path.exists")
     @patch("app.services.auth.Credentials")
     @patch("app.services.auth.build")
-    def test_build_service_error(self, mock_build, mock_creds_class, mock_exists, mock_is_empty, mock_settings):
+    def test_build_service_error(
+        self, mock_build, mock_creds_class, mock_exists, mock_is_empty, mock_settings
+    ):
         """Build service error should return error message."""
         from app.services.auth import get_gmail_service
 
@@ -568,7 +596,9 @@ class TestCheckLoginStatus:
     @patch("app.services.auth._is_file_empty")
     @patch("os.path.exists")
     @patch("os.remove")
-    def test_empty_token_file(self, mock_remove, mock_exists, mock_is_empty, mock_settings):
+    def test_empty_token_file(
+        self, mock_remove, mock_exists, mock_is_empty, mock_settings
+    ):
         """Empty token file should return logged out and be removed."""
         from app.services.auth import check_login_status
 
@@ -586,7 +616,9 @@ class TestCheckLoginStatus:
     @patch("os.path.exists")
     @patch("app.services.auth.Credentials")
     @patch("app.services.auth.build")
-    def test_valid_credentials(self, mock_build, mock_creds_class, mock_exists, mock_is_empty, mock_settings):
+    def test_valid_credentials(
+        self, mock_build, mock_creds_class, mock_exists, mock_is_empty, mock_settings
+    ):
         """Valid credentials should return logged in with email."""
         from app.services.auth import check_login_status
 
@@ -617,7 +649,13 @@ class TestCheckLoginStatus:
     @patch("app.services.auth._try_refresh_creds")
     @patch("app.services.auth.build")
     def test_expired_credentials_refreshed(
-        self, mock_build, mock_refresh, mock_creds_class, mock_exists, mock_is_empty, mock_settings
+        self,
+        mock_build,
+        mock_refresh,
+        mock_creds_class,
+        mock_exists,
+        mock_is_empty,
+        mock_settings,
     ):
         """Expired credentials should be refreshed."""
         from app.services.auth import check_login_status
@@ -653,7 +691,9 @@ class TestCheckLoginStatus:
     @patch("os.path.exists")
     @patch("app.services.auth.Credentials")
     @patch("os.remove")
-    def test_corrupted_token_file(self, mock_remove, mock_creds_class, mock_exists, mock_is_empty, mock_settings):
+    def test_corrupted_token_file(
+        self, mock_remove, mock_creds_class, mock_exists, mock_is_empty, mock_settings
+    ):
         """Corrupted token file should return logged out and be removed."""
         from app.services.auth import check_login_status
 
@@ -662,7 +702,9 @@ class TestCheckLoginStatus:
         mock_exists.return_value = True
         mock_is_empty.return_value = False
 
-        mock_creds_class.from_authorized_user_file.side_effect = ValueError("Invalid JSON")
+        mock_creds_class.from_authorized_user_file.side_effect = ValueError(
+            "Invalid JSON"
+        )
 
         result = check_login_status()
 
@@ -674,7 +716,9 @@ class TestCheckLoginStatus:
     @patch("os.path.exists")
     @patch("app.services.auth.Credentials")
     @patch("app.services.auth.build")
-    def test_api_error(self, mock_build, mock_creds_class, mock_exists, mock_is_empty, mock_settings):
+    def test_api_error(
+        self, mock_build, mock_creds_class, mock_exists, mock_is_empty, mock_settings
+    ):
         """API error should return logged out."""
         from app.services.auth import check_login_status
 

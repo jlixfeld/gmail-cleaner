@@ -360,7 +360,9 @@ def get_gmail_service():
                                 or host_lower.endswith((".localhost", ".local"))
                             )
                             scheme = "http" if is_local else "https"
-                        redirect_uri = f"{scheme}://{settings.oauth_host}:{redirect_port}/"
+                        redirect_uri = (
+                            f"{scheme}://{settings.oauth_host}:{redirect_port}/"
+                        )
                         flow.redirect_uri = redirect_uri
                         logger.info(
                             f"Using custom redirect URI {redirect_uri} "

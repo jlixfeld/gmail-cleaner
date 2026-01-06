@@ -7,7 +7,6 @@ Functions for downloading email metadata as CSV.
 import base64
 import csv
 import io
-import time
 
 from app.core import state
 from app.services.auth import get_gmail_service
@@ -139,10 +138,6 @@ def download_emails_background(senders: list[str]) -> None:
                 progress=progress,
                 message=f"Fetched {fetched}/{total_emails} emails...",
             )
-
-            # Rate limiting: sleep every 5 batches to avoid hitting API limits
-            if (i // batch_size + 1) % 5 == 0:
-                time.sleep(0.3)
 
     except Exception as e:
         state.update_download_status(done=True, error=f"Error fetching emails: {e!s}")

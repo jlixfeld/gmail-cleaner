@@ -140,7 +140,10 @@ class TestScanUnreadBySender:
                             "headers": [
                                 {"name": "From", "value": "sender1@example.com"},
                                 {"name": "Subject", "value": "Subject 1"},
-                                {"name": "Date", "value": "Mon, 01 Jan 2025 10:00:00 +0000"},
+                                {
+                                    "name": "Date",
+                                    "value": "Mon, 01 Jan 2025 10:00:00 +0000",
+                                },
                             ]
                         },
                         "sizeEstimate": 1000,
@@ -151,7 +154,10 @@ class TestScanUnreadBySender:
                             "headers": [
                                 {"name": "From", "value": "sender1@example.com"},
                                 {"name": "Subject", "value": "Subject 2"},
-                                {"name": "Date", "value": "Mon, 02 Jan 2025 10:00:00 +0000"},
+                                {
+                                    "name": "Date",
+                                    "value": "Mon, 02 Jan 2025 10:00:00 +0000",
+                                },
                             ]
                         },
                         "sizeEstimate": 2000,
@@ -162,7 +168,10 @@ class TestScanUnreadBySender:
                             "headers": [
                                 {"name": "From", "value": "sender2@example.com"},
                                 {"name": "Subject", "value": "Subject 3"},
-                                {"name": "Date", "value": "Mon, 03 Jan 2025 10:00:00 +0000"},
+                                {
+                                    "name": "Date",
+                                    "value": "Mon, 03 Jan 2025 10:00:00 +0000",
+                                },
                             ]
                         },
                         "sizeEstimate": 500,

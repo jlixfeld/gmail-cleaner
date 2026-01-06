@@ -10,11 +10,18 @@ Usage:
 Then open http://localhost:8766 in your browser.
 """
 
+import logging
 import os
 import webbrowser
 import threading
 
 import uvicorn
+
+# Configure logging to show app-level logs
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
 
 from app.core import settings
 from app.main import app

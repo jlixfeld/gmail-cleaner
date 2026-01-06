@@ -71,9 +71,7 @@ async def api_scan(
     request: Request, body: ScanRequest, background_tasks: BackgroundTasks
 ):
     """Start email scan for unsubscribe links."""
-    filters_dict = (
-        body.filters.model_dump(exclude_none=True) if body.filters else None
-    )
+    filters_dict = body.filters.model_dump(exclude_none=True) if body.filters else None
     background_tasks.add_task(scan_emails, body.limit, filters_dict)
     return {"status": "started"}
 
@@ -120,9 +118,7 @@ async def api_mark_read(
     request: Request, body: MarkReadRequest, background_tasks: BackgroundTasks
 ):
     """Mark emails as read."""
-    filters_dict = (
-        body.filters.model_dump(exclude_none=True) if body.filters else None
-    )
+    filters_dict = body.filters.model_dump(exclude_none=True) if body.filters else None
     background_tasks.add_task(mark_emails_as_read, body.count, filters_dict)
     return {"status": "started"}
 
@@ -135,9 +131,7 @@ async def api_delete_scan(
     background_tasks: BackgroundTasks,
 ):
     """Scan senders for bulk delete."""
-    filters_dict = (
-        body.filters.model_dump(exclude_none=True) if body.filters else None
-    )
+    filters_dict = body.filters.model_dump(exclude_none=True) if body.filters else None
     background_tasks.add_task(scan_senders_for_delete, body.limit, filters_dict)
     return {"status": "started"}
 
@@ -310,9 +304,7 @@ async def api_unread_scan(
     request: Request, body: UnreadScanRequest, background_tasks: BackgroundTasks
 ):
     """Scan unread emails grouped by sender."""
-    filters_dict = (
-        body.filters.model_dump(exclude_none=True) if body.filters else None
-    )
+    filters_dict = body.filters.model_dump(exclude_none=True) if body.filters else None
     background_tasks.add_task(
         scan_unread_by_sender, body.limit, filters_dict, body.inbox_only
     )

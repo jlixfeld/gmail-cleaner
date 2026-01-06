@@ -7,7 +7,6 @@ Tests for unsubscribe.py - unsubscribing from email senders.
 from unittest.mock import Mock, patch, MagicMock
 import urllib.error
 
-import pytest
 
 from app.services.gmail.unsubscribe import unsubscribe_single
 

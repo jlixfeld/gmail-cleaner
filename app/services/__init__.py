@@ -59,4 +59,8 @@ from .gmail import (
     mark_read_and_archive_by_senders_background,
     archive_unread_by_senders_background,
     delete_unread_by_senders_background,
+    # Unknown Senders
+    build_known_senders_cache,
+    get_known_senders_status,
+    scan_unknown_senders_for_delete,
 )
