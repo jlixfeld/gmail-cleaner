@@ -81,8 +81,7 @@ class TestMarkImportantBackground:
         assert status["affected_count"] == 0
 
     @patch("app.services.gmail.important.get_gmail_service")
-    @patch("app.services.gmail.important.time.sleep")
-    def test_successful_mark_important(self, mock_sleep, mock_get_service):
+    def test_successful_mark_important(self, mock_get_service):
         """Successful marking should update status and count."""
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)
@@ -115,8 +114,7 @@ class TestMarkImportantBackground:
         assert "IMPORTANT" in call_args.kwargs["body"]["addLabelIds"]
 
     @patch("app.services.gmail.important.get_gmail_service")
-    @patch("app.services.gmail.important.time.sleep")
-    def test_successful_unmark_important(self, mock_sleep, mock_get_service):
+    def test_successful_unmark_important(self, mock_get_service):
         """Successful unmarking should use removeLabelIds."""
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)
@@ -147,8 +145,7 @@ class TestMarkImportantBackground:
         assert "IMPORTANT" in call_args.kwargs["body"]["removeLabelIds"]
 
     @patch("app.services.gmail.important.get_gmail_service")
-    @patch("app.services.gmail.important.time.sleep")
-    def test_multiple_senders(self, mock_sleep, mock_get_service):
+    def test_multiple_senders(self, mock_get_service):
         """Should process multiple senders."""
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)
@@ -172,8 +169,7 @@ class TestMarkImportantBackground:
         assert status["affected_count"] == 6  # 3 from each sender
 
     @patch("app.services.gmail.important.get_gmail_service")
-    @patch("app.services.gmail.important.time.sleep")
-    def test_pagination(self, mock_sleep, mock_get_service):
+    def test_pagination(self, mock_get_service):
         """Should handle paginated results."""
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)
@@ -207,8 +203,7 @@ class TestMarkImportantBackground:
         assert status["affected_count"] == 150
 
     @patch("app.services.gmail.important.get_gmail_service")
-    @patch("app.services.gmail.important.time.sleep")
-    def test_batch_processing(self, mock_sleep, mock_get_service):
+    def test_batch_processing(self, mock_get_service):
         """Should process in batches of 100."""
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)
@@ -234,9 +229,8 @@ class TestMarkImportantBackground:
         )
 
     @patch("app.services.gmail.important.get_gmail_service")
-    @patch("app.services.gmail.important.time.sleep")
-    def test_throttling(self, mock_sleep, mock_get_service):
-        """Should throttle every 500 emails."""
+    def test_large_batch_processing(self, mock_get_service):
+        """Should process large batches correctly."""
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)
 
@@ -254,8 +248,9 @@ class TestMarkImportantBackground:
 
         mark_important_background(["sender@example.com"])
 
-        # Should have slept after 500 emails
-        assert mock_sleep.called
+        status = get_important_status()
+        assert status["done"] is True
+        assert status["affected_count"] == 500
 
     @patch("app.services.gmail.important.get_gmail_service")
     def test_exception_handling(self, mock_get_service):
@@ -274,8 +269,7 @@ class TestMarkImportantBackground:
         assert status["done"] is True
 
     @patch("app.services.gmail.important.get_gmail_service")
-    @patch("app.services.gmail.important.time.sleep")
-    def test_progress_updates(self, mock_sleep, mock_get_service):
+    def test_progress_updates(self, mock_get_service):
         """Progress should be updated during processing."""
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)

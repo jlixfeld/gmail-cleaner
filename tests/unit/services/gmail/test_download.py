@@ -97,8 +97,7 @@ class TestDownloadEmailsBackground:
         assert status["done"] is True
 
     @patch("app.services.gmail.download.get_gmail_service")
-    @patch("app.services.gmail.download.time.sleep")
-    def test_successful_download(self, mock_sleep, mock_get_service):
+    def test_successful_download(self, mock_get_service):
         """Successful download should generate CSV."""
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)
@@ -176,8 +175,7 @@ class TestDownloadEmailsBackground:
         assert "Test Subject 1" in csv_data
 
     @patch("app.services.gmail.download.get_gmail_service")
-    @patch("app.services.gmail.download.time.sleep")
-    def test_multiple_senders(self, mock_sleep, mock_get_service):
+    def test_multiple_senders(self, mock_get_service):
         """Should download from multiple senders."""
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)
@@ -241,13 +239,12 @@ class TestDownloadEmailsBackground:
         assert "Error fetching emails" in status["error"]
 
     @patch("app.services.gmail.download.get_gmail_service")
-    @patch("app.services.gmail.download.time.sleep")
-    def test_rate_limiting(self, mock_sleep, mock_get_service):
-        """Should sleep for rate limiting on large batches."""
+    def test_large_batch_download(self, mock_get_service):
+        """Should handle large batches correctly."""
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)
 
-        # Create many message IDs to trigger rate limiting
+        # Create many message IDs
         state.set_delete_scan_results(
             [
                 {
@@ -286,12 +283,12 @@ class TestDownloadEmailsBackground:
 
         download_emails_background(["sender@example.com"])
 
-        # Should have called sleep for rate limiting
-        assert mock_sleep.called
+        status = get_download_status()
+        assert status["done"] is True
+        assert status["error"] is None
 
     @patch("app.services.gmail.download.get_gmail_service")
-    @patch("app.services.gmail.download.time.sleep")
-    def test_email_body_extraction_plain_text(self, mock_sleep, mock_get_service):
+    def test_email_body_extraction_plain_text(self, mock_get_service):
         """Should extract plain text body from email."""
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)
@@ -342,8 +339,7 @@ class TestDownloadEmailsBackground:
         assert "Hello, this is the email body" in csv_data
 
     @patch("app.services.gmail.download.get_gmail_service")
-    @patch("app.services.gmail.download.time.sleep")
-    def test_email_body_multipart(self, mock_sleep, mock_get_service):
+    def test_email_body_multipart(self, mock_get_service):
         """Should extract body from multipart email."""
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)

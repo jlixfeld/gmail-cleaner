@@ -111,8 +111,7 @@ class TestScanUnreadBySender:
         assert "in:inbox" not in query
 
     @patch("app.services.gmail.unread.get_gmail_service")
-    @patch("app.services.gmail.unread.time.sleep")
-    def test_successful_scan_groups_by_sender(self, mock_sleep, mock_get_service):
+    def test_successful_scan_groups_by_sender(self, mock_get_service):
         """Successful scan should group emails by sender."""
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)

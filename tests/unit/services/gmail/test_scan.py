@@ -66,8 +66,7 @@ class TestScanEmails:
         assert status["error"] is None
 
     @patch("app.services.gmail.scan.get_gmail_service")
-    @patch("app.services.gmail.scan.time.sleep")
-    def test_successful_scan_with_unsubscribe(self, mock_sleep, mock_get_service):
+    def test_successful_scan_with_unsubscribe(self, mock_get_service):
         """Successful scan should find unsubscribe links."""
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)
@@ -151,8 +150,7 @@ class TestScanEmails:
         assert results[0]["link"] is not None
 
     @patch("app.services.gmail.scan.get_gmail_service")
-    @patch("app.services.gmail.scan.time.sleep")
-    def test_scan_groups_by_domain(self, mock_sleep, mock_get_service):
+    def test_scan_groups_by_domain(self, mock_get_service):
         """Scan should group emails by domain."""
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)
@@ -407,8 +405,7 @@ class TestScanEmailsNoUnsubscribeLinks:
     """Tests for scan when emails don't have unsubscribe links."""
 
     @patch("app.services.gmail.scan.get_gmail_service")
-    @patch("app.services.gmail.scan.time.sleep")
-    def test_no_unsubscribe_links_found(self, mock_sleep, mock_get_service):
+    def test_no_unsubscribe_links_found(self, mock_get_service):
         """Scan should handle emails without unsubscribe links."""
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)

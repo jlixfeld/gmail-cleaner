@@ -81,8 +81,7 @@ class TestArchiveEmailsBackground:
         assert status["archived_count"] == 0
 
     @patch("app.services.gmail.archive.get_gmail_service")
-    @patch("app.services.gmail.archive.time.sleep")
-    def test_successful_archive(self, mock_sleep, mock_get_service):
+    def test_successful_archive(self, mock_get_service):
         """Successful archive should update status and count."""
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)
@@ -110,8 +109,7 @@ class TestArchiveEmailsBackground:
         assert "5 emails" in status["message"]
 
     @patch("app.services.gmail.archive.get_gmail_service")
-    @patch("app.services.gmail.archive.time.sleep")
-    def test_multiple_senders(self, mock_sleep, mock_get_service):
+    def test_multiple_senders(self, mock_get_service):
         """Should archive emails from multiple senders."""
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)
@@ -137,8 +135,7 @@ class TestArchiveEmailsBackground:
         assert "2 senders" in status["message"]
 
     @patch("app.services.gmail.archive.get_gmail_service")
-    @patch("app.services.gmail.archive.time.sleep")
-    def test_pagination(self, mock_sleep, mock_get_service):
+    def test_pagination(self, mock_get_service):
         """Should handle paginated results."""
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)
@@ -173,8 +170,7 @@ class TestArchiveEmailsBackground:
         assert status["archived_count"] == 150
 
     @patch("app.services.gmail.archive.get_gmail_service")
-    @patch("app.services.gmail.archive.time.sleep")
-    def test_batch_processing(self, mock_sleep, mock_get_service):
+    def test_batch_processing(self, mock_get_service):
         """Should process in batches of 100."""
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)
@@ -201,13 +197,12 @@ class TestArchiveEmailsBackground:
         )
 
     @patch("app.services.gmail.archive.get_gmail_service")
-    @patch("app.services.gmail.archive.time.sleep")
-    def test_throttling(self, mock_sleep, mock_get_service):
-        """Should throttle after every 500 emails."""
+    def test_large_batch_processing(self, mock_get_service):
+        """Should process large batches correctly."""
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)
 
-        # Return 600 messages to trigger throttling
+        # Return 600 messages
         mock_list = Mock()
         mock_list.execute.return_value = {
             "messages": [{"id": f"msg{i}"} for i in range(600)]
@@ -222,8 +217,9 @@ class TestArchiveEmailsBackground:
 
         archive_emails_background(["sender@example.com"])
 
-        # Should have slept after 500 emails
-        assert mock_sleep.called
+        status = get_archive_status()
+        assert status["done"] is True
+        assert status["archived_count"] == 600
 
     @patch("app.services.gmail.archive.get_gmail_service")
     def test_exception_handling(self, mock_get_service):
@@ -242,8 +238,7 @@ class TestArchiveEmailsBackground:
         assert status["done"] is True
 
     @patch("app.services.gmail.archive.get_gmail_service")
-    @patch("app.services.gmail.archive.time.sleep")
-    def test_query_uses_sanitized_sender(self, mock_sleep, mock_get_service):
+    def test_query_uses_sanitized_sender(self, mock_get_service):
         """Query should use sanitized sender value."""
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)
@@ -266,8 +261,7 @@ class TestArchiveEmailsBackground:
         assert "in:inbox" in query
 
     @patch("app.services.gmail.archive.get_gmail_service")
-    @patch("app.services.gmail.archive.time.sleep")
-    def test_progress_updates(self, mock_sleep, mock_get_service):
+    def test_progress_updates(self, mock_get_service):
         """Progress should be updated during processing."""
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)
