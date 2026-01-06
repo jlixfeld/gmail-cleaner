@@ -138,24 +138,24 @@ class TestScanRequest:
         assert request.limit == 1000
 
     def test_limit_minimum(self):
-        """Minimum limit should be 1."""
-        request = ScanRequest(limit=1)
-        assert request.limit == 1
+        """Minimum limit should be 0 (scan all)."""
+        request = ScanRequest(limit=0)
+        assert request.limit == 0
 
     def test_limit_maximum(self):
-        """Maximum limit should be 5000."""
-        request = ScanRequest(limit=5000)
-        assert request.limit == 5000
+        """Maximum limit should be 100000."""
+        request = ScanRequest(limit=100000)
+        assert request.limit == 100000
 
     def test_limit_below_minimum(self):
-        """Limit below 1 should fail."""
+        """Limit below 0 should fail."""
         with pytest.raises(ValidationError):
-            ScanRequest(limit=0)
+            ScanRequest(limit=-1)
 
     def test_limit_above_maximum(self):
-        """Limit above 5000 should fail."""
+        """Limit above 100000 should fail."""
         with pytest.raises(ValidationError):
-            ScanRequest(limit=5001)
+            ScanRequest(limit=100001)
 
     def test_with_filters(self):
         """Request with filters should work."""

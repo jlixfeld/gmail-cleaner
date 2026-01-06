@@ -45,15 +45,17 @@ def scan_unread_by_sender(
     """Scan unread emails and group by sender.
 
     Args:
-        limit: Maximum emails to scan
+        limit: Maximum emails to scan. 0 = scan all (no limit).
         filters: Optional filter dict (older_than, larger_than, category, sender, label)
         inbox_only: If True, use "is:unread in:inbox", otherwise "is:unread"
     """
-    if limit <= 0:
+    # Validate input - negative values are invalid, 0 means "scan all"
+    if limit < 0:
         state.reset_unread_scan()
-        state.update_unread_scan_status(error="Limit must be greater than 0", done=True)
+        state.update_unread_scan_status(error="Limit cannot be negative", done=True)
         return
 
+    scan_all = limit == 0
     state.reset_unread_scan()
     state.update_unread_scan_status(message="Connecting to Gmail...")
 
@@ -70,22 +72,25 @@ def scan_unread_by_sender(
         filter_query = build_gmail_query(filters)
         query = f"{base_query} {filter_query}".strip() if filter_query else base_query
 
+        # When scanning all, always request max batch; otherwise request remaining
+        max_results = 500 if scan_all else min(limit, 500)
         results = (
             service.users()
             .messages()
-            .list(userId="me", maxResults=min(limit, 500), q=query)
+            .list(userId="me", maxResults=max_results, q=query)
             .execute()
         )
 
         messages = results.get("messages", [])
 
-        while "nextPageToken" in results and len(messages) < limit:
+        while "nextPageToken" in results and (scan_all or len(messages) < limit):
+            max_results = 500 if scan_all else min(limit - len(messages), 500)
             results = (
                 service.users()
                 .messages()
                 .list(
                     userId="me",
-                    maxResults=min(limit - len(messages), 500),
+                    maxResults=max_results,
                     pageToken=results["nextPageToken"],
                     q=query,
                 )
@@ -93,7 +98,9 @@ def scan_unread_by_sender(
             )
             messages.extend(results.get("messages", []))
 
-        messages = messages[:limit]
+        # Only apply limit if not scanning all
+        if not scan_all:
+            messages = messages[:limit]
         total = len(messages)
 
         if total == 0:

@@ -22,13 +22,19 @@ logger = logging.getLogger(__name__)
 
 
 def scan_senders_for_delete(limit: int = 1000, filters: Optional[dict] = None):
-    """Scan emails and group by sender for bulk delete."""
-    # Validate input
-    if limit <= 0:
+    """Scan emails and group by sender for bulk delete.
+
+    Args:
+        limit: Maximum emails to scan. 0 = scan all (no limit).
+        filters: Optional Gmail filter options.
+    """
+    # Validate input - negative values are invalid, 0 means "scan all"
+    if limit < 0:
         state.reset_delete_scan()
-        state.update_delete_scan_status(error="Limit must be greater than 0", done=True)
+        state.update_delete_scan_status(error="Limit cannot be negative", done=True)
         return
 
+    scan_all = limit == 0
     state.reset_delete_scan()
     state.update_delete_scan_status(message="Connecting to Gmail...")
 
@@ -42,22 +48,25 @@ def scan_senders_for_delete(limit: int = 1000, filters: Optional[dict] = None):
 
         query = build_gmail_query(filters)
 
+        # When scanning all, always request max batch; otherwise request remaining
+        max_results = 500 if scan_all else min(limit, 500)
         results = (
             service.users()
             .messages()
-            .list(userId="me", maxResults=min(limit, 500), q=query or None)
+            .list(userId="me", maxResults=max_results, q=query or None)
             .execute()
         )
 
         messages = results.get("messages", [])
 
-        while "nextPageToken" in results and len(messages) < limit:
+        while "nextPageToken" in results and (scan_all or len(messages) < limit):
+            max_results = 500 if scan_all else min(limit - len(messages), 500)
             results = (
                 service.users()
                 .messages()
                 .list(
                     userId="me",
-                    maxResults=min(limit - len(messages), 500),
+                    maxResults=max_results,
                     pageToken=results["nextPageToken"],
                     q=query or None,
                 )
@@ -65,7 +74,9 @@ def scan_senders_for_delete(limit: int = 1000, filters: Optional[dict] = None):
             )
             messages.extend(results.get("messages", []))
 
-        messages = messages[:limit]
+        # Only apply limit if not scanning all
+        if not scan_all:
+            messages = messages[:limit]
         total = len(messages)
 
         if total == 0:

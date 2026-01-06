@@ -102,7 +102,9 @@ class FiltersModel(BaseModel):
 class ScanRequest(BaseModel):
     """Request to start email scan."""
 
-    limit: int = Field(default=500, ge=1, le=5000, description="Max emails to scan")
+    limit: int = Field(
+        default=500, ge=0, le=100000, description="Max emails to scan. 0 = scan all."
+    )
     filters: Optional[FiltersModel] = Field(
         default=None, description="Gmail filter options"
     )
@@ -125,7 +127,9 @@ class MarkReadRequest(BaseModel):
 class DeleteScanRequest(BaseModel):
     """Request to scan senders for deletion."""
 
-    limit: int = Field(default=1000, ge=1, le=10000, description="Max emails to scan")
+    limit: int = Field(
+        default=1000, ge=0, le=100000, description="Max emails to scan. 0 = scan all."
+    )
     filters: Optional[FiltersModel] = Field(
         default=None, description="Gmail filter options"
     )
@@ -194,7 +198,9 @@ class MarkImportantRequest(BaseModel):
 class UnreadScanRequest(BaseModel):
     """Request to scan unread emails by sender."""
 
-    limit: int = Field(default=1000, ge=1, le=10000, description="Max emails to scan")
+    limit: int = Field(
+        default=1000, ge=0, le=100000, description="Max emails to scan. 0 = scan all."
+    )
     inbox_only: bool = Field(
         default=True, description="True for inbox only, False for all folders"
     )

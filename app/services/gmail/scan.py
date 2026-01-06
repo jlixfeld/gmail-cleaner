@@ -23,13 +23,19 @@ logger = logging.getLogger(__name__)
 
 
 def scan_emails(limit: int = 500, filters: Optional[dict] = None):
-    """Scan emails for unsubscribe links using Gmail Batch API."""
-    # Validate input
-    if limit <= 0:
+    """Scan emails for unsubscribe links using Gmail Batch API.
+
+    Args:
+        limit: Maximum emails to scan. 0 = scan all (no limit).
+        filters: Optional Gmail filter options.
+    """
+    # Validate input - negative values are invalid, 0 means "scan all"
+    if limit < 0:
         state.reset_scan()
-        state.update_scan_status(error="Limit must be greater than 0", done=True)
+        state.update_scan_status(error="Limit cannot be negative", done=True)
         return
 
+    scan_all = limit == 0
     state.reset_scan()
     state.update_scan_status(message="Connecting to Gmail...")
 
@@ -48,10 +54,12 @@ def scan_emails(limit: int = 500, filters: Optional[dict] = None):
         message_ids = []
         page_token = None
 
-        while len(message_ids) < limit:
+        while scan_all or len(message_ids) < limit:
+            # When scanning all, always request max batch; otherwise request remaining
+            max_results = 500 if scan_all else min(500, limit - len(message_ids))
             list_params = {
                 "userId": "me",
-                "maxResults": min(500, limit - len(message_ids)),
+                "maxResults": max_results,
             }
             if page_token:
                 list_params["pageToken"] = page_token

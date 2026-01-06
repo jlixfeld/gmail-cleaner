@@ -66,7 +66,7 @@ GmailCleaner.Delete = {
         `;
         progressCard.classList.remove('hidden');
 
-        const limit = document.getElementById('deleteScanLimit').value;
+        const limit = getLimitValue('deleteScanLimit');
         const filters = GmailCleaner.Filters.get();
 
         try {
@@ -74,7 +74,7 @@ GmailCleaner.Delete = {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    limit: parseInt(limit),
+                    limit: limit,
                     filters: filters
                 })
             });

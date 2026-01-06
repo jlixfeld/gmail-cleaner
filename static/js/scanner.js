@@ -67,7 +67,7 @@ GmailCleaner.Scanner = {
         `;
         progressCard.classList.remove('hidden');
 
-        const limit = document.getElementById('emailLimit').value;
+        const limit = getLimitValue('emailLimit');
         const filters = GmailCleaner.Filters.get();
 
         try {
@@ -75,7 +75,7 @@ GmailCleaner.Scanner = {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    limit: parseInt(limit),
+                    limit: limit,
                     filters: filters
                 })
             });

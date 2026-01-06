@@ -88,6 +88,48 @@
     border-color: var(--primary-color);
 }
 
+/* Limit Input Styles */
+.scan-limit-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.limit-input-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.limit-input {
+    width: 120px;
+    padding: 10px 12px;
+    font-size: 14px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    background: var(--card-bg);
+    color: var(--text-primary);
+    transition: border-color 0.2s;
+}
+
+.limit-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.limit-warning {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--warning-color, #f59e0b);
+    margin-top: 4px;
+}
+
+.limit-warning svg {
+    flex-shrink: 0;
+}
+
 /* Buttons */
 .btn {
     display: inline-flex;

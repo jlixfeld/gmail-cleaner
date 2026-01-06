@@ -91,7 +91,7 @@ GmailCleaner.Unread = {
         `;
         progressCard.classList.remove('hidden');
 
-        const limit = document.getElementById('unreadScanLimit').value;
+        const limit = getLimitValue('unreadScanLimit');
         const filters = GmailCleaner.Filters.get();
 
         try {
@@ -99,7 +99,7 @@ GmailCleaner.Unread = {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    limit: parseInt(limit),
+                    limit: limit,
                     inbox_only: this.inboxOnly,
                     filters: filters
                 })

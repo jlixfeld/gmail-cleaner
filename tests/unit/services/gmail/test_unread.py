@@ -34,20 +34,12 @@ def reset_state():
 class TestScanUnreadBySender:
     """Tests for scan_unread_by_sender function."""
 
-    def test_invalid_limit_zero(self):
-        """Zero limit should set error and return early."""
-        scan_unread_by_sender(limit=0)
-
-        status = get_unread_scan_status()
-        assert status["error"] == "Limit must be greater than 0"
-        assert status["done"] is True
-
     def test_invalid_limit_negative(self):
         """Negative limit should set error and return early."""
         scan_unread_by_sender(limit=-1)
 
         status = get_unread_scan_status()
-        assert status["error"] == "Limit must be greater than 0"
+        assert status["error"] == "Limit cannot be negative"
         assert status["done"] is True
 
     @patch("app.services.gmail.unread.get_gmail_service")
