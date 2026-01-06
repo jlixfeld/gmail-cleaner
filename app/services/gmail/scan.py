@@ -16,6 +16,7 @@ from app.services.gmail.helpers import (
     get_unsubscribe_from_headers,
     get_sender_info,
     get_subject,
+    get_list_id,
 )
 
 logger = logging.getLogger(__name__)
@@ -92,6 +93,8 @@ def scan_emails(limit: int = 500, filters: Optional[dict] = None):
                 "email": "",
                 "first_date": None,
                 "last_date": None,
+                "list_id": None,
+                "senders": [],
             }
         )
         processed = 0
@@ -110,9 +113,15 @@ def scan_emails(limit: int = 500, filters: Optional[dict] = None):
             if unsub_link:
                 sender_name, sender_email = get_sender_info(headers)
                 subject = get_subject(headers)
-                domain = (
-                    sender_email.split("@")[-1] if "@" in sender_email else sender_email
-                )
+                list_id = get_list_id(headers)
+
+                # Determine grouping key: List-Id if available, otherwise sender email
+                if list_id:
+                    grouping_key = f"list:{list_id}"
+                elif "@" in sender_email:
+                    grouping_key = sender_email
+                else:
+                    grouping_key = sender_email  # Fallback for malformed
 
                 # Extract date from headers
                 email_date = None
@@ -121,47 +130,58 @@ def scan_emails(limit: int = 500, filters: Optional[dict] = None):
                         email_date = header["value"]
                         break
 
-                unsubscribe_data[domain]["link"] = unsub_link
-                unsubscribe_data[domain]["count"] += 1
-                unsubscribe_data[domain]["type"] = unsub_type
-                unsubscribe_data[domain]["sender"] = sender_name
-                unsubscribe_data[domain]["email"] = sender_email
-                if len(unsubscribe_data[domain]["subjects"]) < 3:
-                    unsubscribe_data[domain]["subjects"].append(subject)
+                data = unsubscribe_data[grouping_key]
+                data["link"] = unsub_link
+                data["count"] += 1
+                data["type"] = unsub_type
+                data["list_id"] = list_id
+
+                # Track all unique senders in this group
+                sender_info = {"name": sender_name, "email": sender_email}
+                if sender_info not in data["senders"]:
+                    data["senders"].append(sender_info)
+
+                # Keep primary sender as the most common one (first encountered)
+                if not data["sender"]:
+                    data["sender"] = sender_name
+                    data["email"] = sender_email
+
+                if len(data["subjects"]) < 3:
+                    data["subjects"].append(subject)
 
                 # Track first and last dates (parse dates for accurate comparison)
                 if email_date:
                     try:
                         # Parse RFC 2822 date string to datetime for comparison
                         msg_datetime = parsedate_to_datetime(email_date)
-                        current_first = unsubscribe_data[domain]["first_date"]
-                        current_last = unsubscribe_data[domain]["last_date"]
+                        current_first = data["first_date"]
+                        current_last = data["last_date"]
 
                         # Update first_date if this is earlier
                         if current_first is None:
-                            unsubscribe_data[domain]["first_date"] = email_date
+                            data["first_date"] = email_date
                         else:
                             try:
                                 first_datetime = parsedate_to_datetime(current_first)
                                 if msg_datetime < first_datetime:
-                                    unsubscribe_data[domain]["first_date"] = email_date
+                                    data["first_date"] = email_date
                             except (ValueError, TypeError):
                                 # If parsing fails, use string comparison as fallback
                                 if email_date < current_first:
-                                    unsubscribe_data[domain]["first_date"] = email_date
+                                    data["first_date"] = email_date
 
                         # Update last_date if this is later
                         if current_last is None:
-                            unsubscribe_data[domain]["last_date"] = email_date
+                            data["last_date"] = email_date
                         else:
                             try:
                                 last_datetime = parsedate_to_datetime(current_last)
                                 if msg_datetime > last_datetime:
-                                    unsubscribe_data[domain]["last_date"] = email_date
+                                    data["last_date"] = email_date
                             except (ValueError, TypeError):
                                 # If parsing fails, use string comparison as fallback
                                 if email_date > current_last:
-                                    unsubscribe_data[domain]["last_date"] = email_date
+                                    data["last_date"] = email_date
                     except (ValueError, TypeError):
                         # If date parsing fails, skip date tracking for this message
                         pass
@@ -185,6 +205,7 @@ def scan_emails(limit: int = 500, filters: Optional[dict] = None):
                             "Date",
                             "List-Unsubscribe",
                             "List-Unsubscribe-Post",
+                            "List-Id",
                         ],
                     )
                 )
@@ -201,7 +222,7 @@ def scan_emails(limit: int = 500, filters: Optional[dict] = None):
         sorted_results = sorted(
             [
                 {
-                    "domain": k,
+                    "domain": k.replace("list:", "") if k.startswith("list:") else k,
                     "link": v["link"],
                     "count": v["count"],
                     "subjects": v["subjects"],
@@ -210,6 +231,8 @@ def scan_emails(limit: int = 500, filters: Optional[dict] = None):
                     "email": v.get("email", ""),
                     "first_date": v.get("first_date"),
                     "last_date": v.get("last_date"),
+                    "list_id": v.get("list_id"),
+                    "senders": v.get("senders", []),
                 }
                 for k, v in unsubscribe_data.items()
             ],

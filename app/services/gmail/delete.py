@@ -185,47 +185,74 @@ def get_delete_scan_results() -> list:
     return state.delete_scan_results.copy()
 
 
-def delete_emails_by_sender(sender: str) -> dict:
-    """Delete all emails from a specific sender."""
-    if not sender or not sender.strip():
+def delete_emails_by_sender(sender: str, list_id: Optional[str] = None) -> dict:
+    """Delete all emails from a specific sender or mailing list.
+
+    Checks both delete scan results (with cached message_ids) and subscription
+    scan results. For subscription results without cached message_ids, queries
+    Gmail directly.
+
+    Args:
+        sender: Sender email address (used when list_id is not provided)
+        list_id: List-Id header value for mailing lists (takes precedence over sender)
+    """
+    # When list_id is provided, use it for lookup; otherwise require sender
+    if not list_id and (not sender or not sender.strip()):
         return {
             "success": False,
             "deleted": 0,
             "size_freed": 0,
-            "message": "No sender specified",
+            "message": "No sender or list_id specified",
         }
 
-    # Validate sender format - must be a valid email address or domain
-    sender = sender.strip()
-    # Email format: user@domain.tld
-    email_pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
-    # Domain format: domain.tld (at least one dot, valid domain structure)
-    domain_pattern = r"^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$"
+    # Determine lookup strategy and find matching data
+    sender_data = None
+    source = None
+    message_ids = []
+    size_freed = 0
+    need_gmail_query = False
 
-    if not (re.match(email_pattern, sender) or re.match(domain_pattern, sender)):
-        return {
-            "success": False,
-            "deleted": 0,
-            "size_freed": 0,
-            "message": "Invalid sender format. Must be a valid email address or domain.",
-        }
+    if list_id:
+        # Look up by list_id in subscription scan results
+        sub_results = state.scan_results
+        sender_data = next((r for r in sub_results if r.get("list_id") == list_id), None)
+        if sender_data:
+            source = "subscription_scan"
+            # Subscription scan doesn't cache message_ids, need to query Gmail
+            need_gmail_query = True
+    else:
+        # Look up by sender email in delete scan results
+        sender = sender.strip()
+        # Validate sender format - must be a valid email address or domain
+        email_pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+        domain_pattern = r"^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*\.[a-zA-Z]{2,}$"
 
-    # Get cached scan results - use message_ids to delete only what was scanned
-    scan_results = state.get_delete_scan_results()
-    sender_data = next((r for r in scan_results if r.get("email") == sender), None)
+        if not (re.match(email_pattern, sender) or re.match(domain_pattern, sender)):
+            return {
+                "success": False,
+                "deleted": 0,
+                "size_freed": 0,
+                "message": "Invalid sender format. Must be a valid email address or domain.",
+            }
+
+        # Check delete scan results (has cached message_ids)
+        delete_results = state.get_delete_scan_results()
+        sender_data = next((r for r in delete_results if r.get("email") == sender), None)
+        if sender_data:
+            source = "delete_scan"
+            message_ids = sender_data.get("message_ids", [])
+            size_freed = sender_data.get("total_size", 0)
 
     if not sender_data:
         return {
             "success": False,
             "deleted": 0,
             "size_freed": 0,
-            "message": "No scan results found for this sender. Please scan first.",
+            "message": "No scan results found. Please scan first.",
         }
 
-    message_ids = sender_data.get("message_ids", [])
-    size_freed = sender_data.get("total_size", 0)
-
-    if not message_ids:
+    if not message_ids and not need_gmail_query:
+        # Delete scan source with empty message_ids = nothing to delete
         return {
             "success": True,
             "deleted": 0,
@@ -238,7 +265,57 @@ def delete_emails_by_sender(sender: str) -> dict:
         return {"success": False, "deleted": 0, "size_freed": 0, "message": error}
 
     try:
-        # Batch delete using cached message IDs (move to trash)
+        # If no cached message_ids (subscription scan), query Gmail directly
+        if need_gmail_query:
+            # Build query based on list_id or sender email
+            if list_id:
+                query = f"list:{list_id}"
+            elif sender:
+                query = f"from:{sender}"
+            else:
+                return {
+                    "success": True,
+                    "deleted": 0,
+                    "size_freed": 0,
+                    "message": "No emails found",
+                }
+
+            # Fetch message IDs from Gmail
+            logger.info(f"Querying Gmail with: {query}")
+            results = (
+                service.users()
+                .messages()
+                .list(userId="me", maxResults=500, q=query)
+                .execute()
+            )
+            messages = results.get("messages", [])
+
+            # Continue fetching if more pages
+            while "nextPageToken" in results:
+                results = (
+                    service.users()
+                    .messages()
+                    .list(
+                        userId="me",
+                        maxResults=500,
+                        pageToken=results["nextPageToken"],
+                        q=query,
+                    )
+                    .execute()
+                )
+                messages.extend(results.get("messages", []))
+
+            message_ids = [m["id"] for m in messages]
+
+        if not message_ids:
+            return {
+                "success": True,
+                "deleted": 0,
+                "size_freed": 0,
+                "message": "No emails found",
+            }
+
+        # Batch delete (move to trash)
         batch_size = 100
         deleted = 0
 
@@ -249,12 +326,22 @@ def delete_emails_by_sender(sender: str) -> dict:
             ).execute()
             deleted += len(batch)
 
-        # Remove sender from cached results
-        current_results = state.get_delete_scan_results()
-        state.set_delete_scan_results(
-            [r for r in current_results if r.get("email") != sender]
-        )
+        # Remove sender from cached results based on source
+        if source == "delete_scan":
+            current_results = state.get_delete_scan_results()
+            if list_id:
+                state.set_delete_scan_results(
+                    [r for r in current_results if r.get("list_id") != list_id]
+                )
+            else:
+                state.set_delete_scan_results(
+                    [r for r in current_results if r.get("email") != sender]
+                )
 
+        logger.info(
+            f"Delete complete: {deleted} emails moved to trash "
+            f"(source={source}, list_id={list_id}, sender={sender})"
+        )
         return {
             "success": True,
             "deleted": deleted,
@@ -263,6 +350,7 @@ def delete_emails_by_sender(sender: str) -> dict:
         }
 
     except Exception as e:
+        logger.exception(f"Error deleting emails (list_id={list_id}, sender={sender})")
         return {"success": False, "deleted": 0, "size_freed": 0, "message": str(e)}
 
 

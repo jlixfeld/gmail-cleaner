@@ -487,6 +487,17 @@
     color: var(--primary-color);
 }
 
+.type-list {
+    background: rgba(156, 39, 176, 0.15);
+    color: #9c27b0;
+}
+
+.sender-count {
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-weight: 400;
+}
+
 /* Badge */
 .badge {
     margin-left: auto;

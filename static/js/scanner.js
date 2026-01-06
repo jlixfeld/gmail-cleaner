@@ -178,13 +178,45 @@ GmailCleaner.Scanner = {
 
             const deleteButton = `<button class="unsub-btn delete-btn" id="del-${i}" onclick="GmailCleaner.Scanner.deleteSubscriptionEmails(${i})" title="Move all emails from this sender to Trash. You can still unsubscribe afterward.">Delete ${r.count}</button>`;
 
+            // Display: List-Id if present, otherwise "Sender Name <email>" or domain
+            let displayName;
+            let listBadge = '';
+            let senderCount = '';
+            let senderTooltip = '';
+
+            if (r.list_id) {
+                displayName = GmailCleaner.UI.escapeHtml(r.list_id);
+                listBadge = '<span class="type-badge type-list">List</span>';
+                if (r.senders && r.senders.length > 1) {
+                    senderCount = ` <span class="sender-count">(${r.senders.length} senders)</span>`;
+                }
+                // Build tooltip with sender info since list_id is often cryptic
+                if (r.sender && r.email) {
+                    const senderDisplay = r.sender !== r.email
+                        ? `${r.sender} <${r.email}>`
+                        : r.email;
+                    senderTooltip = `From: ${senderDisplay}`;
+                    if (r.senders && r.senders.length > 1) {
+                        senderTooltip += ` (+${r.senders.length - 1} more)`;
+                    }
+                }
+            } else {
+                // Show domain or "Sender Name <email>" or just email if no name
+                const escapedDomain = GmailCleaner.UI.escapeHtml(r.domain || '');
+                displayName = escapedDomain;
+                // Tooltip shows full info in case display is truncated
+                senderTooltip = r.sender && r.sender !== r.email
+                    ? `${r.sender} <${r.email || r.domain}>`
+                    : (r.email || r.domain || '');
+            }
+
             item.innerHTML = `
                 <label class="checkbox-wrapper result-checkbox">
                     <input type="checkbox" class="result-cb" data-index="${i}" data-type="${r.type || 'manual'}" data-email="${GmailCleaner.UI.escapeHtml(r.email || '')}">
                     <span class="checkmark"></span>
                 </label>
                 <div class="result-content">
-                    <div class="result-sender">${GmailCleaner.UI.escapeHtml(r.domain)} ${typeLabel}</div>
+                    <div class="result-sender" title="${GmailCleaner.UI.escapeHtml(senderTooltip)}">${displayName}${senderCount} ${listBadge} ${typeLabel}</div>
                     <div class="result-subject">${GmailCleaner.UI.escapeHtml(r.subjects[0] || 'No subject')}</div>
                 </div>
                 <div class="result-meta">
@@ -339,12 +371,15 @@ GmailCleaner.Scanner = {
         const r = GmailCleaner.results[index];
         const btn = document.getElementById('del-' + index);
 
-        if (!r.email) {
-            alert('No sender email found for this subscription.');
+        // For mailing lists, we need list_id; for regular senders, we need email
+        if (!r.list_id && !r.email) {
+            alert('No sender email or list found for this subscription.');
             return;
         }
 
-        if (!confirm(`Delete ALL ${r.count} emails from ${r.email}?\n\nThis will move them to Trash.`)) {
+        // Show appropriate target in confirmation (list name or sender email)
+        const target = r.list_id ? `list ${r.list_id}` : r.email;
+        if (!confirm(`Delete ALL ${r.count} emails from ${target}?\n\nThis will move them to Trash.`)) {
             return;
         }
 
@@ -361,7 +396,7 @@ GmailCleaner.Scanner = {
             const response = await fetch('/api/delete-emails', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sender: r.email })
+                body: JSON.stringify({ sender: r.email || '', list_id: r.list_id || null })
             });
             const result = await response.json();
 
@@ -406,15 +441,18 @@ GmailCleaner.Scanner = {
         const unsubBtn = document.getElementById('unsub-' + index);
         const delBtn = document.getElementById('del-' + index);
 
-        if (!r.email) {
-            alert('No sender email found for this subscription.');
+        // For mailing lists, we need list_id; for regular senders, we need email
+        if (!r.list_id && !r.email) {
+            alert('No sender email or list found for this subscription.');
             return;
         }
 
         const isOneClick = r.type === 'one-click';
+        // Show appropriate target in confirmation (list name or domain)
+        const target = r.list_id ? `list ${r.list_id}` : r.domain;
         const confirmMsg = isOneClick
-            ? `Unsubscribe from ${r.domain} and delete ALL ${r.count} emails?\n\nThis will:\n1. Stop future emails from this sender\n2. Move ${r.count} existing emails to Trash`
-            : `Open unsubscribe page and delete ALL ${r.count} emails from ${r.domain}?\n\nThis will:\n1. Open the unsubscribe page (complete unsubscription there)\n2. Move ${r.count} existing emails to Trash`;
+            ? `Unsubscribe from ${target} and delete ALL ${r.count} emails?\n\nThis will:\n1. Stop future emails from this sender\n2. Move ${r.count} existing emails to Trash`
+            : `Open unsubscribe page and delete ALL ${r.count} emails from ${target}?\n\nThis will:\n1. Open the unsubscribe page (complete unsubscription there)\n2. Move ${r.count} existing emails to Trash`;
 
         if (!confirm(confirmMsg)) {
             return;
@@ -462,7 +500,7 @@ GmailCleaner.Scanner = {
             const deleteResponse = await fetch('/api/delete-emails', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sender: r.email })
+                body: JSON.stringify({ sender: r.email || '', list_id: r.list_id || null })
             });
             const deleteResult = await deleteResponse.json();
 

@@ -146,6 +146,9 @@ class DeleteEmailsRequest(BaseModel):
     """Request to delete emails from a sender."""
 
     sender: str = Field(default="", description="Sender email address")
+    list_id: Optional[str] = Field(
+        default=None, description="List-Id for mailing lists"
+    )
 
 
 class DeleteBulkRequest(BaseModel):

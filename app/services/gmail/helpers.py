@@ -218,3 +218,27 @@ def get_subject(headers: list) -> str:
         if header["name"].lower() == "subject":
             return header["value"]
     return "(No Subject)"
+
+
+def get_list_id(headers: list) -> Optional[str]:
+    """Extract List-Id from email headers.
+
+    The List-Id header identifies mailing lists and is used to group emails
+    from the same list regardless of sender. Format is typically:
+    "List Name <list-id.domain.com>" or just "<list-id.domain.com>"
+
+    Args:
+        headers: List of email header dicts with 'name' and 'value' keys
+
+    Returns:
+        The list identifier string, or None if not found
+    """
+    for header in headers:
+        if header["name"].lower() == "list-id":
+            value = header["value"]
+            # Extract from <list-name.domain> format
+            match = re.search(r"<([^>]+)>", value)
+            if match:
+                return match.group(1)
+            return value.strip()
+    return None

@@ -142,14 +142,15 @@ async def api_delete_scan(
 @router.post("/delete-emails")
 @limiter.limit(HEAVY_OPERATION_RATE_LIMIT)
 async def api_delete_emails(request: Request, body: DeleteEmailsRequest):
-    """Delete emails from a specific sender."""
-    if not body.sender or not body.sender.strip():
+    """Delete emails from a specific sender or mailing list."""
+    # Require either sender or list_id
+    if not body.list_id and (not body.sender or not body.sender.strip()):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Sender email is required",
+            detail="Sender email or list_id is required",
         )
     try:
-        return delete_emails_by_sender(body.sender)
+        return delete_emails_by_sender(body.sender, body.list_id)
     except Exception as e:
         logger.exception("Error deleting emails")
         raise HTTPException(
