@@ -316,6 +316,24 @@
     transform: rotate(45deg);
 }
 
+/* Indeterminate/partial checkbox state - horizontal dash */
+.checkbox-wrapper .checkmark.indeterminate {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.checkbox-wrapper .checkmark.indeterminate::after {
+    content: '';
+    position: absolute;
+    left: 3px;
+    top: 6px;
+    width: 10px;
+    height: 2px;
+    background: white;
+    border: none;
+    transform: none;
+}
+
 /* Results List */
 .results-list {
     background: var(--card-bg);

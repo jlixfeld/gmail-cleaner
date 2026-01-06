@@ -14,6 +14,10 @@ GmailCleaner.Delete = {
     domainGroups: [],
     expandedDomains: new Set(),
 
+    // Selection state (persists across expand/collapse)
+    selectedDomains: new Set(),
+    selectedSenders: new Set(),
+
     formatDateRange(firstDate, lastDate) {
         /**
          * Parse RFC 2822 date string and format as MM/DD/YYYY
@@ -48,6 +52,162 @@ GmailCleaner.Delete = {
         } else {
             return `${last} to ${first}`;
         }
+    },
+
+    // Selection state management
+    getDomainCheckboxState(domain) {
+        const group = this.domainGroups.find(g => g.domain === domain);
+        if (!group) return 'none';
+
+        const senderEmails = group.senders.map(s => s.email);
+        const selectedCount = senderEmails.filter(e => this.selectedSenders.has(e)).length;
+
+        if (selectedCount === 0) return 'none';
+        if (selectedCount === senderEmails.length) return 'all';
+        return 'partial';
+    },
+
+    updateDomainCheckboxVisual(domain) {
+        const checkbox = document.querySelector(`.domain-cb[data-domain="${CSS.escape(domain)}"]`);
+        if (!checkbox) return;
+
+        const state = this.getDomainCheckboxState(domain);
+        const checkmark = checkbox.nextElementSibling;
+
+        checkbox.checked = state === 'all';
+        checkbox.indeterminate = state === 'partial';
+
+        if (checkmark) {
+            checkmark.classList.toggle('indeterminate', state === 'partial');
+        }
+    },
+
+    updateAllDomainCheckboxStates() {
+        this.domainGroups.forEach(group => {
+            this.updateDomainCheckboxVisual(group.domain);
+        });
+        this.updateSelectAllState();
+    },
+
+    updateSelectAllState() {
+        const selectAll = document.getElementById('deleteSelectAll');
+        if (!selectAll) return;
+
+        if (this.groupByDomain) {
+            const allDomains = this.domainGroups.length;
+            const allSelected = this.domainGroups.every(g =>
+                this.getDomainCheckboxState(g.domain) === 'all'
+            );
+            const someSelected = this.domainGroups.some(g =>
+                this.getDomainCheckboxState(g.domain) !== 'none'
+            );
+
+            selectAll.checked = allDomains > 0 && allSelected;
+            selectAll.indeterminate = someSelected && !allSelected;
+        } else {
+            const allResults = GmailCleaner.deleteResults.length;
+            const selectedCount = this.selectedSenders.size;
+            selectAll.checked = allResults > 0 && selectedCount === allResults;
+            selectAll.indeterminate = selectedCount > 0 && selectedCount < allResults;
+        }
+    },
+
+    handleDomainCheckboxChange(domain, isChecked) {
+        const group = this.domainGroups.find(g => g.domain === domain);
+        if (!group) return;
+
+        const currentState = this.getDomainCheckboxState(domain);
+
+        // Two-click cycle: partial → all, all → none, none → all
+        let selectAll;
+        if (currentState === 'partial') {
+            selectAll = true;
+        } else if (currentState === 'all') {
+            selectAll = false;
+        } else {
+            selectAll = true;
+        }
+
+        // Update selectedSenders for all senders in this domain
+        group.senders.forEach(sender => {
+            if (selectAll) {
+                this.selectedSenders.add(sender.email);
+            } else {
+                this.selectedSenders.delete(sender.email);
+            }
+        });
+
+        // Update domain selection state
+        if (selectAll) {
+            this.selectedDomains.add(domain);
+        } else {
+            this.selectedDomains.delete(domain);
+        }
+
+        // Update visible sender checkboxes
+        const senderContainer = document.querySelector(`.domain-senders-container[data-domain="${CSS.escape(domain)}"]`);
+        if (senderContainer) {
+            senderContainer.querySelectorAll('.sender-cb').forEach(cb => {
+                cb.checked = selectAll;
+            });
+        }
+
+        // Update visual state
+        this.updateDomainCheckboxVisual(domain);
+        this.updateSelectAllState();
+    },
+
+    handleSenderCheckboxChange(email, domain, isChecked) {
+        if (isChecked) {
+            this.selectedSenders.add(email);
+        } else {
+            this.selectedSenders.delete(email);
+        }
+
+        // Update domain checkbox state
+        this.updateDomainCheckboxVisual(domain);
+
+        // Update selectedDomains based on state
+        const state = this.getDomainCheckboxState(domain);
+        if (state === 'all') {
+            this.selectedDomains.add(domain);
+        } else {
+            this.selectedDomains.delete(domain);
+        }
+
+        this.updateSelectAllState();
+    },
+
+    handleFlatSenderCheckboxChange(email, isChecked) {
+        if (isChecked) {
+            this.selectedSenders.add(email);
+        } else {
+            this.selectedSenders.delete(email);
+        }
+        this.updateSelectAllState();
+    },
+
+    restoreSelectionState() {
+        // Restore domain checkbox states
+        document.querySelectorAll('.domain-cb').forEach(cb => {
+            const domain = cb.dataset.domain;
+            this.updateDomainCheckboxVisual(domain);
+        });
+
+        // Restore sender checkbox states
+        document.querySelectorAll('.sender-cb, .delete-cb').forEach(cb => {
+            const email = cb.dataset.email;
+            if (email) {
+                cb.checked = this.selectedSenders.has(email);
+            }
+        });
+
+        this.updateSelectAllState();
+    },
+
+    clearSelectionState() {
+        this.selectedDomains.clear();
+        this.selectedSenders.clear();
     },
 
     async startScan() {
@@ -201,10 +361,11 @@ GmailCleaner.Delete = {
 
             const dateRange = this.formatDateRange(r.first_date, r.last_date);
             const dateRangeDisplay = dateRange ? `<div class="result-date-range">${dateRange}</div>` : '';
+            const jsEscapedEmail = r.email.replace(/'/g, "\\'").replace(/"/g, '\\"');
 
             item.innerHTML = `
                 <label class="checkbox-wrapper result-checkbox">
-                    <input type="checkbox" class="delete-cb" data-index="${originalIndex}" data-email="${GmailCleaner.UI.escapeHtml(r.email)}">
+                    <input type="checkbox" class="delete-cb" data-index="${originalIndex}" data-email="${GmailCleaner.UI.escapeHtml(r.email)}" onchange="GmailCleaner.Delete.handleFlatSenderCheckboxChange('${jsEscapedEmail}', this.checked)">
                     <span class="checkmark"></span>
                 </label>
                 <div class="result-content">
@@ -231,7 +392,9 @@ GmailCleaner.Delete = {
 
         // Reset selections when toggling
         document.getElementById('deleteSelectAll').checked = false;
+        document.getElementById('deleteSelectAll').indeterminate = false;
         this.expandedDomains.clear();
+        this.clearSelectionState();
 
         // Re-render
         this.displayResults();
@@ -313,17 +476,20 @@ GmailCleaner.Delete = {
         const sendersTooltip = group.uniqueSenders.join('\n');
         const recipientsTooltip = group.uniqueRecipients.join('\n');
 
+        const escapedDomain = GmailCleaner.UI.escapeHtml(group.domain);
+        const jsEscapedDomain = group.domain.replace(/'/g, "\\'").replace(/"/g, '\\"');
+
         row.innerHTML = `
             <label class="checkbox-wrapper result-checkbox">
-                <input type="checkbox" class="domain-cb" data-domain="${GmailCleaner.UI.escapeHtml(group.domain)}" data-index="${index}">
+                <input type="checkbox" class="domain-cb" data-domain="${escapedDomain}" data-index="${index}" onchange="GmailCleaner.Delete.handleDomainCheckboxChange('${jsEscapedDomain}', this.checked)">
                 <span class="checkmark"></span>
             </label>
-            <button class="expand-toggle" onclick="GmailCleaner.Delete.toggleDomainExpand('${GmailCleaner.UI.escapeHtml(group.domain)}')">
+            <button class="expand-toggle" onclick="GmailCleaner.Delete.toggleDomainExpand('${escapedDomain}')">
                 <svg viewBox="0 0 24 24" width="18" height="18">
                     <path fill="currentColor" d="${isExpanded ? 'M7 10l5 5 5-5H7z' : 'M10 17l5-5-5-5v10z'}"/>
                 </svg>
             </button>
-            <div class="result-content" onclick="GmailCleaner.Delete.toggleDomainExpand('${GmailCleaner.UI.escapeHtml(group.domain)}')" style="cursor: pointer;">
+            <div class="result-content" onclick="GmailCleaner.Delete.toggleDomainExpand('${escapedDomain}')" style="cursor: pointer;">
                 <div class="result-sender domain-name">${GmailCleaner.UI.escapeHtml(group.domain)}</div>
                 <div class="domain-pills">
                     <span class="pill sender-pill" data-tooltip="${GmailCleaner.UI.escapeHtml(sendersTooltip)}">${group.uniqueSenders.length} sender${group.uniqueSenders.length !== 1 ? 's' : ''}</span>
@@ -355,12 +521,14 @@ GmailCleaner.Delete = {
         sortedSenders.forEach(sender => {
             const originalIndex = GmailCleaner.deleteResults.indexOf(sender);
             const recipientsTooltip = (sender.recipients || []).join('\n');
+            const jsEscapedEmail = sender.email.replace(/'/g, "\\'").replace(/"/g, '\\"');
+            const jsEscapedDomain = group.domain.replace(/'/g, "\\'").replace(/"/g, '\\"');
 
             const senderRow = document.createElement('div');
             senderRow.className = 'result-item sender-row nested';
             senderRow.innerHTML = `
                 <label class="checkbox-wrapper result-checkbox">
-                    <input type="checkbox" class="delete-cb sender-cb" data-index="${originalIndex}" data-email="${GmailCleaner.UI.escapeHtml(sender.email)}" data-domain="${GmailCleaner.UI.escapeHtml(group.domain)}">
+                    <input type="checkbox" class="delete-cb sender-cb" data-index="${originalIndex}" data-email="${GmailCleaner.UI.escapeHtml(sender.email)}" data-domain="${GmailCleaner.UI.escapeHtml(group.domain)}" onchange="GmailCleaner.Delete.handleSenderCheckboxChange('${jsEscapedEmail}', '${jsEscapedDomain}', this.checked)">
                     <span class="checkmark"></span>
                 </label>
                 <div class="result-content">
@@ -389,6 +557,7 @@ GmailCleaner.Delete = {
             this.expandedDomains.add(domain);
         }
         this.displayResults();
+        this.restoreSelectionState();
     },
 
     async deleteDomainEmails(domain) {
@@ -436,8 +605,10 @@ GmailCleaner.Delete = {
                     setTimeout(async () => {
                         const resultsResponse = await fetch('/api/delete-scan-results');
                         GmailCleaner.deleteResults = await resultsResponse.json();
+                        this.clearSelectionState();
                         this.displayResults();
                         document.getElementById('deleteSelectAll').checked = false;
+                        document.getElementById('deleteSelectAll').indeterminate = false;
                     }, 1000);
                 } else {
                     alert('Error: ' + status.error);
@@ -470,17 +641,36 @@ GmailCleaner.Delete = {
         const selectAll = document.getElementById('deleteSelectAll');
         const checked = selectAll.checked;
 
+        // Clear selection state first
+        this.selectedDomains.clear();
+        this.selectedSenders.clear();
+
         if (this.groupByDomain) {
-            // In domain view, select domain checkboxes
+            // In domain view, update all domains and their senders
+            this.domainGroups.forEach(group => {
+                if (checked) {
+                    this.selectedDomains.add(group.domain);
+                    group.senders.forEach(s => this.selectedSenders.add(s.email));
+                }
+            });
+
+            // Update checkboxes
             document.querySelectorAll('.domain-cb').forEach(cb => {
                 cb.checked = checked;
+                cb.indeterminate = false;
+                const checkmark = cb.nextElementSibling;
+                if (checkmark) checkmark.classList.remove('indeterminate');
             });
-            // Also select nested sender checkboxes if visible
             document.querySelectorAll('.sender-cb').forEach(cb => {
                 cb.checked = checked;
             });
         } else {
             // In flat view, select all sender checkboxes
+            if (checked) {
+                GmailCleaner.deleteResults.forEach(r => {
+                    this.selectedSenders.add(r.email);
+                });
+            }
             document.querySelectorAll('.delete-cb').forEach(cb => {
                 cb.checked = checked;
             });
@@ -537,51 +727,20 @@ GmailCleaner.Delete = {
     },
 
     async deleteSelected() {
-        let totalEmails = 0;
-        const senderEmails = [];
-        const senderSet = new Set(); // Avoid duplicates
-
-        if (this.groupByDomain) {
-            // Collect from checked domains
-            document.querySelectorAll('.domain-cb:checked').forEach(cb => {
-                const domain = cb.dataset.domain;
-                const group = this.domainGroups.find(g => g.domain === domain);
-                if (group) {
-                    group.senders.forEach(s => {
-                        if (!senderSet.has(s.email)) {
-                            senderSet.add(s.email);
-                            senderEmails.push(s.email);
-                            totalEmails += s.count;
-                        }
-                    });
-                }
-            });
-
-            // Also collect from individually checked senders (in expanded domains)
-            document.querySelectorAll('.sender-cb:checked').forEach(cb => {
-                const email = cb.dataset.email;
-                if (!senderSet.has(email)) {
-                    senderSet.add(email);
-                    const index = parseInt(cb.dataset.index);
-                    const r = GmailCleaner.deleteResults[index];
-                    senderEmails.push(email);
-                    totalEmails += r.count;
-                }
-            });
-        } else {
-            // Flat view - collect from checked senders
-            document.querySelectorAll('.delete-cb:checked').forEach(cb => {
-                const index = parseInt(cb.dataset.index);
-                const r = GmailCleaner.deleteResults[index];
-                totalEmails += r.count;
-                senderEmails.push(r.email);
-            });
-        }
+        // Use selectedSenders Set for reliable selection state
+        const senderEmails = Array.from(this.selectedSenders);
 
         if (senderEmails.length === 0) {
             alert('Please select at least one sender to delete emails from.');
             return;
         }
+
+        // Calculate total email count
+        let totalEmails = 0;
+        senderEmails.forEach(email => {
+            const result = GmailCleaner.deleteResults.find(r => r.email === email);
+            if (result) totalEmails += result.count;
+        });
 
         if (!confirm(`Delete ${totalEmails} emails from ${senderEmails.length} senders?\n\nThis will move them to Trash.`)) {
             return;
@@ -654,8 +813,10 @@ GmailCleaner.Delete = {
                     setTimeout(async () => {
                         const resultsResponse = await fetch('/api/delete-scan-results');
                         GmailCleaner.deleteResults = await resultsResponse.json();
+                        this.clearSelectionState();
                         this.displayResults();
                         document.getElementById('deleteSelectAll').checked = false;
+                        document.getElementById('deleteSelectAll').indeterminate = false;
                     }, 1000);
                 } else {
                     alert('Error: ' + status.error);
