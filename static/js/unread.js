@@ -183,8 +183,13 @@ GmailCleaner.Unread = {
         noResults.classList.add('hidden');
         this.setActionButtonsEnabled(true);
 
-        const displayCount = Math.min(this.results.length, this.displayLimit);
-        this.results.slice(0, displayCount).forEach((r, i) => {
+        // Sort results by date
+        const sortedResults = sortResultsByDate(this.results, GmailCleaner.sortOrder.unread);
+
+        const displayCount = Math.min(sortedResults.length, this.displayLimit);
+        sortedResults.slice(0, displayCount).forEach((r, i) => {
+            // Find original index for actions
+            const originalIndex = this.results.indexOf(r);
             const item = document.createElement('div');
             item.className = 'result-item';
 
@@ -193,7 +198,7 @@ GmailCleaner.Unread = {
 
             item.innerHTML = `
                 <label class="checkbox-wrapper result-checkbox">
-                    <input type="checkbox" class="unread-cb" data-index="${i}" data-email="${GmailCleaner.UI.escapeHtml(r.email)}">
+                    <input type="checkbox" class="unread-cb" data-index="${originalIndex}" data-email="${GmailCleaner.UI.escapeHtml(r.email)}">
                     <span class="checkmark"></span>
                 </label>
                 <div class="result-content">
@@ -205,16 +210,16 @@ GmailCleaner.Unread = {
                     </div>
                 </div>
                 <div class="result-actions" style="display: flex; gap: 4px;">
-                    <button class="unsub-btn" style="background: #10b981;" onclick="GmailCleaner.Unread.markReadSender(${i})" title="Mark as Read">
+                    <button class="unsub-btn" style="background: #10b981;" onclick="GmailCleaner.Unread.markReadSender(${originalIndex})" title="Mark as Read">
                         Read
                     </button>
-                    <button class="unsub-btn" style="background: #3b82f6;" onclick="GmailCleaner.Unread.markReadAndArchiveSender(${i})" title="Mark as Read + Archive">
+                    <button class="unsub-btn" style="background: #3b82f6;" onclick="GmailCleaner.Unread.markReadAndArchiveSender(${originalIndex})" title="Mark as Read + Archive">
                         R+A
                     </button>
-                    <button class="unsub-btn" style="background: #8b5cf6;" onclick="GmailCleaner.Unread.archiveSender(${i})" title="Archive Only">
+                    <button class="unsub-btn" style="background: #8b5cf6;" onclick="GmailCleaner.Unread.archiveSender(${originalIndex})" title="Archive Only">
                         Archive
                     </button>
-                    <button class="unsub-btn" style="background: #ef4444;" onclick="GmailCleaner.Unread.deleteSender(${i})" title="Delete">
+                    <button class="unsub-btn" style="background: #ef4444;" onclick="GmailCleaner.Unread.deleteSender(${originalIndex})" title="Delete">
                         Del
                     </button>
                 </div>

@@ -498,6 +498,42 @@
     font-weight: 400;
 }
 
+/* Sort Button */
+.sort-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    background: var(--hover-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-left: 12px;
+}
+
+.sort-btn:hover {
+    background: var(--border-color);
+    color: var(--text-primary);
+}
+
+.sort-indicator {
+    display: inline-flex;
+    align-items: center;
+    transition: transform 0.2s;
+}
+
+.sort-indicator.sort-asc {
+    transform: rotate(180deg);
+}
+
+.sort-indicator.sort-desc {
+    transform: rotate(0deg);
+}
+
 /* Badge */
 .badge {
     margin-left: auto;

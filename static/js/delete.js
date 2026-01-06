@@ -152,7 +152,12 @@ GmailCleaner.Delete = {
         noResults.classList.add('hidden');
         this.setActionButtonsEnabled(true);
 
-        GmailCleaner.deleteResults.forEach((r, i) => {
+        // Sort results by date
+        const sortedResults = sortResultsByDate(GmailCleaner.deleteResults, GmailCleaner.sortOrder.delete);
+
+        sortedResults.forEach((r, i) => {
+            // Find original index for actions
+            const originalIndex = GmailCleaner.deleteResults.indexOf(r);
             const item = document.createElement('div');
             item.className = 'result-item';
 
@@ -161,7 +166,7 @@ GmailCleaner.Delete = {
 
             item.innerHTML = `
                 <label class="checkbox-wrapper result-checkbox">
-                    <input type="checkbox" class="delete-cb" data-index="${i}" data-email="${GmailCleaner.UI.escapeHtml(r.email)}">
+                    <input type="checkbox" class="delete-cb" data-index="${originalIndex}" data-email="${GmailCleaner.UI.escapeHtml(r.email)}">
                     <span class="checkmark"></span>
                 </label>
                 <div class="result-content">
@@ -173,7 +178,7 @@ GmailCleaner.Delete = {
                     </div>
                 </div>
                 <div class="result-actions">
-                    <button class="unsub-btn delete-btn" id="delete-${i}" onclick="GmailCleaner.Delete.deleteSenderEmails(${i})">
+                    <button class="unsub-btn delete-btn" id="delete-${originalIndex}" onclick="GmailCleaner.Delete.deleteSenderEmails(${originalIndex})">
                         Delete ${r.count}
                     </button>
                 </div>

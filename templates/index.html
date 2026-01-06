@@ -246,6 +246,14 @@
                                     <span class="checkmark"></span>
                                 </label>
                                 <span class="results-count"><span id="resultsBadge">0</span> senders found</span>
+                                <button class="sort-btn" onclick="toggleSortOrder('subscription')" title="Sorted: Newest first (click to toggle)">
+                                    <span>Date</span>
+                                    <span class="sort-indicator sort-desc" id="subscriptionSortIndicator">
+                                        <svg viewBox="0 0 24 24" width="14" height="14">
+                                            <path fill="currentColor" d="M7 10l5 5 5-5H7z"/>
+                                        </svg>
+                                    </span>
+                                </button>
                             </div>
                             <div class="toolbar-right">
                                 <button class="btn btn-danger" onclick="deleteSelectedSubscriptions()" title="Move all emails from selected senders to Trash">
@@ -449,6 +457,14 @@
                                     <span class="checkmark"></span>
                                 </label>
                                 <span class="results-count"><span id="unreadSendersBadge">0</span> senders found</span>
+                                <button class="sort-btn" onclick="toggleSortOrder('unread')" title="Sorted: Newest first (click to toggle)">
+                                    <span>Date</span>
+                                    <span class="sort-indicator sort-desc" id="unreadSortIndicator">
+                                        <svg viewBox="0 0 24 24" width="14" height="14">
+                                            <path fill="currentColor" d="M7 10l5 5 5-5H7z"/>
+                                        </svg>
+                                    </span>
+                                </button>
                             </div>
                             <div class="toolbar-right" style="display: flex; align-items: center; gap: 16px;">
                                 <div style="display: flex; align-items: center; gap: 6px;">
@@ -596,6 +612,14 @@
                                     <span class="checkmark"></span>
                                 </label>
                                 <span class="results-count"><span id="deleteSendersBadge">0</span> senders found</span>
+                                <button class="sort-btn" onclick="toggleSortOrder('delete')" title="Sorted: Newest first (click to toggle)">
+                                    <span>Date</span>
+                                    <span class="sort-indicator sort-desc" id="deleteSortIndicator">
+                                        <svg viewBox="0 0 24 24" width="14" height="14">
+                                            <path fill="currentColor" d="M7 10l5 5 5-5H7z"/>
+                                        </svg>
+                                    </span>
+                                </button>
                             </div>
                         </div>
 

@@ -157,26 +157,31 @@ GmailCleaner.Scanner = {
         resultsSection.classList.remove('hidden');
         noResults.classList.add('hidden');
 
-        GmailCleaner.results.forEach((r, i) => {
+        // Sort results by date
+        const sortedResults = sortResultsByDate(GmailCleaner.results, GmailCleaner.sortOrder.subscription);
+
+        sortedResults.forEach((r, i) => {
+            // Find original index for actions
+            const originalIndex = GmailCleaner.results.indexOf(r);
             const item = document.createElement('div');
             item.className = 'result-item';
-            item.id = `result-item-${i}`;
+            item.id = `result-item-${originalIndex}`;
 
             let actionButton;
             let comboButton;
             let typeLabel;
 
             if (r.type === 'one-click') {
-                actionButton = `<button class="unsub-btn one-click" id="unsub-${i}" onclick="GmailCleaner.Scanner.autoUnsubscribe(${i})" title="Stop receiving emails from this sender. Existing emails remain in your inbox.">✓ Unsubscribe</button>`;
-                comboButton = `<button class="unsub-btn combo-btn" id="combo-${i}" onclick="GmailCleaner.Scanner.unsubscribeAndDelete(${i})" title="Unsubscribe from this sender, then move all their emails to Trash.">Unsub & Delete</button>`;
+                actionButton = `<button class="unsub-btn one-click" id="unsub-${originalIndex}" onclick="GmailCleaner.Scanner.autoUnsubscribe(${originalIndex})" title="Stop receiving emails from this sender. Existing emails remain in your inbox.">✓ Unsubscribe</button>`;
+                comboButton = `<button class="unsub-btn combo-btn" id="combo-${originalIndex}" onclick="GmailCleaner.Scanner.unsubscribeAndDelete(${originalIndex})" title="Unsubscribe from this sender, then move all their emails to Trash.">Unsub & Delete</button>`;
                 typeLabel = `<span class="type-badge type-auto">Auto</span>`;
             } else {
-                actionButton = `<button class="unsub-btn manual" id="unsub-${i}" onclick="GmailCleaner.Scanner.openLink(${i})" title="Opens the unsubscribe page in a new tab. Complete the process there.">Open Link →</button>`;
-                comboButton = `<button class="unsub-btn combo-btn" id="combo-${i}" onclick="GmailCleaner.Scanner.unsubscribeAndDelete(${i})" title="Opens unsubscribe page and moves all emails to Trash.">Unsub & Delete</button>`;
+                actionButton = `<button class="unsub-btn manual" id="unsub-${originalIndex}" onclick="GmailCleaner.Scanner.openLink(${originalIndex})" title="Opens the unsubscribe page in a new tab. Complete the process there.">Open Link →</button>`;
+                comboButton = `<button class="unsub-btn combo-btn" id="combo-${originalIndex}" onclick="GmailCleaner.Scanner.unsubscribeAndDelete(${originalIndex})" title="Opens unsubscribe page and moves all emails to Trash.">Unsub & Delete</button>`;
                 typeLabel = `<span class="type-badge type-manual">Manual</span>`;
             }
 
-            const deleteButton = `<button class="unsub-btn delete-btn" id="del-${i}" onclick="GmailCleaner.Scanner.deleteSubscriptionEmails(${i})" title="Move all emails from this sender to Trash. You can still unsubscribe afterward.">Delete ${r.count}</button>`;
+            const deleteButton = `<button class="unsub-btn delete-btn" id="del-${originalIndex}" onclick="GmailCleaner.Scanner.deleteSubscriptionEmails(${originalIndex})" title="Move all emails from this sender to Trash. You can still unsubscribe afterward.">Delete ${r.count}</button>`;
 
             // Display: List-Id if present, otherwise "Sender Name <email>" or domain
             let displayName;
@@ -212,7 +217,7 @@ GmailCleaner.Scanner = {
 
             item.innerHTML = `
                 <label class="checkbox-wrapper result-checkbox">
-                    <input type="checkbox" class="result-cb" data-index="${i}" data-type="${r.type || 'manual'}" data-email="${GmailCleaner.UI.escapeHtml(r.email || '')}">
+                    <input type="checkbox" class="result-cb" data-index="${originalIndex}" data-type="${r.type || 'manual'}" data-email="${GmailCleaner.UI.escapeHtml(r.email || '')}">
                     <span class="checkmark"></span>
                 </label>
                 <div class="result-content">
@@ -221,7 +226,7 @@ GmailCleaner.Scanner = {
                 </div>
                 <div class="result-meta">
                     ${r.first_date && r.last_date ? `<div class="result-date-range">${GmailCleaner.Scanner.formatDateRange(r.first_date, r.last_date)}</div>` : ''}
-                    <span class="result-count" id="count-${i}">${r.count} emails</span>
+                    <span class="result-count" id="count-${originalIndex}">${r.count} emails</span>
                 </div>
                 <div class="result-actions">
                     ${deleteButton}
