@@ -6,7 +6,6 @@ Functions for deleting emails and scanning senders.
 
 import logging
 import re
-import time
 from collections import defaultdict
 from typing import Optional
 
@@ -159,10 +158,6 @@ def scan_senders_for_delete(limit: int = 1000, filters: Optional[dict] = None):
             state.update_delete_scan_status(
                 progress=progress, message=f"Scanned {processed}/{total} emails"
             )
-
-            # Rate limiting
-            if (i // batch_size + 1) % 5 == 0:
-                time.sleep(0.3)
 
         # Sort by count
         sorted_senders = sorted(

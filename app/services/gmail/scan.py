@@ -5,7 +5,6 @@ Functions for scanning emails to find unsubscribe links.
 """
 
 import logging
-import time
 from collections import defaultdict
 from email.utils import parsedate_to_datetime
 from typing import Optional
@@ -197,10 +196,6 @@ def scan_emails(limit: int = 500, filters: Optional[dict] = None):
                 progress=progress,
                 message=f"Scanned {processed}/{total} emails ({len(unsubscribe_data)} found)",
             )
-
-            # Rate limiting - small delay every 5 batches (500 emails)
-            if (i // batch_size + 1) % 5 == 0:
-                time.sleep(0.3)
 
         # Sort by count and format results
         sorted_results = sorted(

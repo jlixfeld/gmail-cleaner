@@ -5,7 +5,6 @@ Functions for scanning and managing unread emails by sender.
 """
 
 import logging
-import time
 from collections import defaultdict
 from datetime import datetime
 from email.utils import parsedate_to_datetime
@@ -192,10 +191,6 @@ def scan_unread_by_sender(
                 progress=progress, message=f"Scanned {processed}/{total} unread emails"
             )
 
-            # Rate limiting
-            if (i // batch_size + 1) % 5 == 0:
-                time.sleep(0.3)
-
         # Sort by count
         sorted_senders = sorted(
             [{"email": k, **v} for k, v in sender_counts.items()],
@@ -345,9 +340,6 @@ def _process_unread_action(
                 progress=progress,
                 message=f"Processed {affected}/{total_emails} emails...",
             )
-            # Rate limiting for large batches
-            if i + batch_size < total_emails:
-                time.sleep(0.2)
     except Exception as e:
         logger.exception(f"Error during {action_name}")
         errors.append(f"Batch modify error: {e!s}")
