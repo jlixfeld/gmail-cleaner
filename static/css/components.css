@@ -1186,3 +1186,159 @@
     font-size: 12px;
     color: var(--text-tertiary);
 }
+
+/* Domain Grouping Styles */
+.domain-row {
+    border-left: 3px solid var(--primary-color);
+    background: var(--hover-bg);
+}
+
+.domain-row.expanded {
+    border-bottom: none;
+}
+
+.domain-name {
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.expand-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-right: 4px;
+}
+
+.expand-toggle:hover {
+    background: var(--border-color);
+    color: var(--text-primary);
+}
+
+/* Nested senders container */
+.domain-senders-container {
+    border-left: 3px solid var(--primary-color);
+    margin-left: 0;
+    background: var(--card-bg);
+}
+
+.sender-row.nested {
+    padding-left: 56px;
+    border-left: none;
+    background: var(--card-bg);
+}
+
+.sender-row.nested:hover {
+    background: var(--hover-bg);
+}
+
+/* Allow full sender email display in nested rows */
+.sender-row.nested .result-sender {
+    width: auto;
+    flex: 1;
+    min-width: 200px;
+    white-space: normal;
+    word-break: break-all;
+}
+
+.sender-row.nested .result-content {
+    flex-wrap: wrap;
+}
+
+.sender-row.nested .result-meta {
+    min-width: auto;
+}
+
+/* Pills for sender/recipient counts */
+.domain-pills {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 12px;
+}
+
+.pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: 500;
+    border-radius: var(--radius-full);
+    cursor: default;
+    position: relative;
+}
+
+.pill.small {
+    padding: 1px 6px;
+    font-size: 10px;
+    margin-left: 8px;
+}
+
+.sender-pill {
+    background: rgba(66, 133, 244, 0.12);
+    color: var(--primary-color);
+}
+
+.recipient-pill {
+    background: rgba(52, 168, 83, 0.12);
+    color: var(--success-color);
+}
+
+/* Tooltip on hover */
+.pill[data-tooltip] {
+    cursor: help;
+}
+
+.pill[data-tooltip]:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 0;
+    padding: 8px 12px;
+    background: var(--text-primary);
+    color: var(--card-bg);
+    font-size: 11px;
+    font-weight: 400;
+    white-space: pre-wrap;
+    text-align: left;
+    border-radius: var(--radius-sm);
+    z-index: 1000;
+    max-width: 350px;
+    max-height: 400px;
+    overflow-y: auto;
+    min-width: 200px;
+    box-shadow: var(--shadow-md);
+    line-height: 1.4;
+}
+
+.pill[data-tooltip]:hover::before {
+    content: '';
+    position: absolute;
+    bottom: calc(100% + 2px);
+    left: 12px;
+    border: 6px solid transparent;
+    border-top-color: var(--text-primary);
+    z-index: 1001;
+}
+
+/* Group toggle in toolbar */
+.group-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.group-toggle span {
+    white-space: nowrap;
+}

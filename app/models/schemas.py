@@ -157,6 +157,15 @@ class DeleteBulkRequest(BaseModel):
     senders: list[str] = Field(default=[], description="List of sender addresses")
 
 
+class DeleteDomainRequest(BaseModel):
+    """Request to delete emails from all senders in a domain."""
+
+    domain: str = Field(..., description="Domain name to delete emails from")
+    senders: list[str] = Field(
+        default=[], description="List of sender email addresses in the domain"
+    )
+
+
 class DownloadEmailsRequest(BaseModel):
     """Request to download emails from selected senders."""
 

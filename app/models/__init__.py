@@ -7,6 +7,7 @@ from .schemas import (
     UnsubscribeRequest,
     DeleteEmailsRequest,
     DeleteBulkRequest,
+    DeleteDomainRequest,
     DownloadEmailsRequest,
     CreateLabelRequest,
     ApplyLabelRequest,

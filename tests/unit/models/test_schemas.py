@@ -12,6 +12,7 @@ from app.models.schemas import (
     ScanRequest,
     MarkReadRequest,
     DeleteBulkRequest,
+    DeleteDomainRequest,
     UnsubscribeRequest,
     DeleteEmailsRequest,
 )
@@ -210,6 +211,28 @@ class TestDeleteBulkRequest:
         senders = [f"user{i}@example.com" for i in range(1000)]
         request = DeleteBulkRequest(senders=senders)
         assert len(request.senders) == 1000
+
+
+class TestDeleteDomainRequest:
+    """Tests for DeleteDomainRequest model."""
+
+    def test_valid_domain_request(self):
+        """Valid domain with senders should pass."""
+        request = DeleteDomainRequest(
+            domain="example.com", senders=["user1@example.com", "user2@example.com"]
+        )
+        assert request.domain == "example.com"
+        assert len(request.senders) == 2
+
+    def test_empty_senders_list(self):
+        """Empty senders list should be valid at model level."""
+        request = DeleteDomainRequest(domain="example.com", senders=[])
+        assert request.senders == []
+
+    def test_missing_domain_fails(self):
+        """Missing domain should fail validation."""
+        with pytest.raises(ValidationError):
+            DeleteDomainRequest(senders=["user@example.com"])
 
 
 class TestUnsubscribeRequest:

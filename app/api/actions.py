@@ -26,6 +26,7 @@ from app.models import (
     UnsubscribeRequest,
     DeleteEmailsRequest,
     DeleteBulkRequest,
+    DeleteDomainRequest,
     DownloadEmailsRequest,
     CreateLabelRequest,
     ApplyLabelRequest,
@@ -162,6 +163,21 @@ async def api_delete_emails_bulk(
     request: Request, body: DeleteBulkRequest, background_tasks: BackgroundTasks
 ):
     """Delete emails from multiple senders (background task with progress)."""
+    background_tasks.add_task(delete_emails_bulk_background, body.senders)
+    return {"status": "started"}
+
+
+@router.post("/delete-domain")
+@limiter.limit(HEAVY_OPERATION_RATE_LIMIT)
+async def api_delete_domain(
+    request: Request, body: DeleteDomainRequest, background_tasks: BackgroundTasks
+):
+    """Delete emails from all senders in a domain (background task with progress)."""
+    if not body.senders:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="At least one sender is required",
+        )
     background_tasks.add_task(delete_emails_bulk_background, body.senders)
     return {"status": "started"}
 

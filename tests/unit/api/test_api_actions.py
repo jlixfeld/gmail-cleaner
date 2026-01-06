@@ -187,8 +187,36 @@ class TestDeleteBulkEndpoint:
         """POST /api/delete-emails-bulk with empty list should start background task."""
         response = client.post("/api/delete-emails-bulk", json={"senders": []})
         assert response.status_code == 200
+
+
+class TestDeleteDomainEndpoint:
+    """Tests for POST /api/delete-domain endpoint."""
+
+    @patch("app.api.actions.delete_emails_bulk_background")
+    def test_delete_domain_with_valid_senders(self, mock_delete, client):
+        """POST /api/delete-domain with valid senders should start background task."""
+        senders = ["sender1@example.com", "sender2@example.com"]
+        response = client.post(
+            "/api/delete-domain", json={"domain": "example.com", "senders": senders}
+        )
+        assert response.status_code == 200
         assert response.json() == {"status": "started"}
-        mock_delete.assert_called_once_with([])
+        mock_delete.assert_called_once_with(senders)
+
+    def test_delete_domain_with_empty_senders(self, client):
+        """POST /api/delete-domain with empty senders should return 400."""
+        response = client.post(
+            "/api/delete-domain", json={"domain": "example.com", "senders": []}
+        )
+        assert response.status_code == 400
+        assert "sender" in response.json()["detail"].lower()
+
+    def test_delete_domain_missing_domain(self, client):
+        """POST /api/delete-domain without domain should return 422."""
+        response = client.post(
+            "/api/delete-domain", json={"senders": ["sender@example.com"]}
+        )
+        assert response.status_code == 422
 
 
 class TestRequestValidation:

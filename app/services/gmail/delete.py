@@ -91,11 +91,13 @@ def scan_senders_for_delete(limit: int = 1000, filters: Optional[dict] = None):
                 "count": 0,
                 "sender": "",
                 "email": "",
+                "domain": "",
                 "subjects": [],
                 "first_date": None,
                 "last_date": None,
                 "message_ids": [],
                 "total_size": 0,
+                "recipients": set(),
             }
         )
         processed = 0
@@ -130,6 +132,18 @@ def scan_senders_for_delete(limit: int = 1000, filters: Optional[dict] = None):
                 if len(sender_counts[sender_email]["subjects"]) < 3:
                     sender_counts[sender_email]["subjects"].append(subject)
 
+                # Extract domain from sender email
+                domain = (
+                    sender_email.split("@")[-1].lower()
+                    if "@" in sender_email
+                    else sender_email
+                )
+                sender_counts[sender_email]["domain"] = domain
+
+                # Extract recipients from To header
+                recipients = get_recipients_from_headers(headers)
+                sender_counts[sender_email]["recipients"].update(recipients)
+
                 # Track first and last dates
                 if email_date:
                     if sender_counts[sender_email]["first_date"] is None:
@@ -149,7 +163,7 @@ def scan_senders_for_delete(limit: int = 1000, filters: Optional[dict] = None):
                         userId="me",
                         id=msg_data["id"],
                         format="metadata",
-                        metadataHeaders=["From", "Subject", "Date"],
+                        metadataHeaders=["From", "Subject", "Date", "To"],
                     )
                 )
 
@@ -159,6 +173,10 @@ def scan_senders_for_delete(limit: int = 1000, filters: Optional[dict] = None):
             state.update_delete_scan_status(
                 progress=progress, message=f"Scanned {processed}/{total} emails"
             )
+
+        # Convert recipient sets to lists before returning
+        for sender_data in sender_counts.values():
+            sender_data["recipients"] = list(sender_data["recipients"])
 
         # Sort by count
         sorted_senders = sorted(
@@ -710,11 +728,13 @@ def scan_unknown_senders_for_delete(limit: int = 1000, filters: Optional[dict] =
                 "count": 0,
                 "sender": "",
                 "email": "",
+                "domain": "",
                 "subjects": [],
                 "first_date": None,
                 "last_date": None,
                 "message_ids": [],
                 "total_size": 0,
+                "recipients": set(),
             }
         )
         processed = 0
@@ -755,6 +775,18 @@ def scan_unknown_senders_for_delete(limit: int = 1000, filters: Optional[dict] =
                 if len(sender_counts[sender_email]["subjects"]) < 3:
                     sender_counts[sender_email]["subjects"].append(subject)
 
+                # Extract domain from sender email
+                domain = (
+                    sender_email.split("@")[-1].lower()
+                    if "@" in sender_email
+                    else sender_email
+                )
+                sender_counts[sender_email]["domain"] = domain
+
+                # Extract recipients from To header
+                recipients = get_recipients_from_headers(headers)
+                sender_counts[sender_email]["recipients"].update(recipients)
+
                 if email_date:
                     if sender_counts[sender_email]["first_date"] is None:
                         sender_counts[sender_email]["first_date"] = email_date
@@ -773,7 +805,7 @@ def scan_unknown_senders_for_delete(limit: int = 1000, filters: Optional[dict] =
                         userId="me",
                         id=msg_data["id"],
                         format="metadata",
-                        metadataHeaders=["From", "Subject", "Date"],
+                        metadataHeaders=["From", "Subject", "Date", "To"],
                     )
                 )
 
@@ -784,6 +816,10 @@ def scan_unknown_senders_for_delete(limit: int = 1000, filters: Optional[dict] =
                 progress=progress,
                 message=f"Scanned {processed}/{total} emails ({skipped} known skipped)",
             )
+
+        # Convert recipient sets to lists before returning
+        for sender_data in sender_counts.values():
+            sender_data["recipients"] = list(sender_data["recipients"])
 
         # Sort by count
         sorted_senders = sorted(

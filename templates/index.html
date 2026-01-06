@@ -672,14 +672,13 @@
                                 </button>
                             </div>
                             <div class="toolbar-right">
-                                <button class="sort-btn" onclick="toggleSortOrder('delete')" title="Sorted: Newest first (click for oldest)">
-                                    <span>Date</span>
-                                    <span class="sort-indicator sort-desc" id="deleteSortIndicator">
-                                        <svg viewBox="0 0 24 24" width="14" height="14">
-                                            <path fill="currentColor" d="M7 10l5 5 5-5H7z"/>
-                                        </svg>
-                                    </span>
-                                </button>
+                                <div class="toggle-wrapper group-toggle">
+                                    <span>Group by Domain</span>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" id="groupByDomainToggle" onchange="GmailCleaner.Delete.toggleGroupByDomain()">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
                             </div>
                         </div>
 

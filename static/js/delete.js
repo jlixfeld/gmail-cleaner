@@ -9,6 +9,11 @@ GmailCleaner.Delete = {
     knownSendersCached: false,
     buildingKnownSenders: false,
 
+    // Domain grouping state
+    groupByDomain: false,
+    domainGroups: [],
+    expandedDomains: new Set(),
+
     formatDateRange(firstDate, lastDate) {
         /**
          * Parse RFC 2822 date string and format as MM/DD/YYYY
@@ -158,9 +163,9 @@ GmailCleaner.Delete = {
         const badge = document.getElementById('deleteSendersBadge');
 
         resultsList.innerHTML = '';
-        badge.textContent = GmailCleaner.deleteResults.length;
 
         if (GmailCleaner.deleteResults.length === 0) {
+            badge.textContent = '0';
             resultsSection.classList.add('hidden');
             noResults.classList.remove('hidden');
             this.setActionButtonsEnabled(false);
@@ -170,6 +175,20 @@ GmailCleaner.Delete = {
         resultsSection.classList.remove('hidden');
         noResults.classList.add('hidden');
         this.setActionButtonsEnabled(true);
+
+        // Dispatch to the right renderer
+        if (this.groupByDomain) {
+            this.buildDomainGroups();
+            this.displayDomainResults();
+            badge.textContent = this.domainGroups.length + ' domains';
+        } else {
+            this.displayFlatResults();
+            badge.textContent = GmailCleaner.deleteResults.length;
+        }
+    },
+
+    displayFlatResults() {
+        const resultsList = document.getElementById('deleteResultsList');
 
         // Sort results by date
         const sortedResults = sortResultsByDate(GmailCleaner.deleteResults, GmailCleaner.sortOrder.delete);
@@ -206,6 +225,233 @@ GmailCleaner.Delete = {
         });
     },
 
+    toggleGroupByDomain() {
+        const toggle = document.getElementById('groupByDomainToggle');
+        this.groupByDomain = toggle.checked;
+
+        // Reset selections when toggling
+        document.getElementById('deleteSelectAll').checked = false;
+        this.expandedDomains.clear();
+
+        // Re-render
+        this.displayResults();
+    },
+
+    buildDomainGroups() {
+        const domainMap = new Map();
+
+        GmailCleaner.deleteResults.forEach(sender => {
+            const domain = sender.domain || sender.email.split('@').pop().toLowerCase();
+            if (!domainMap.has(domain)) {
+                domainMap.set(domain, {
+                    domain: domain,
+                    totalEmails: 0,
+                    senders: [],
+                    uniqueSenders: new Set(),
+                    uniqueRecipients: new Set(),
+                    firstDate: null,
+                    lastDate: null,
+                });
+            }
+
+            const group = domainMap.get(domain);
+            group.totalEmails += sender.count;
+            group.senders.push(sender);
+            group.uniqueSenders.add(sender.email);
+
+            // Merge recipients
+            if (sender.recipients) {
+                sender.recipients.forEach(r => group.uniqueRecipients.add(r));
+            }
+
+            // Track date range
+            if (sender.first_date) {
+                if (!group.firstDate || new Date(sender.first_date) < new Date(group.firstDate)) {
+                    group.firstDate = sender.first_date;
+                }
+            }
+            if (sender.last_date) {
+                if (!group.lastDate || new Date(sender.last_date) > new Date(group.lastDate)) {
+                    group.lastDate = sender.last_date;
+                }
+            }
+        });
+
+        // Convert sets to arrays and sort by total emails
+        this.domainGroups = Array.from(domainMap.values())
+            .map(group => ({
+                ...group,
+                uniqueSenders: Array.from(group.uniqueSenders),
+                uniqueRecipients: Array.from(group.uniqueRecipients),
+            }))
+            .sort((a, b) => b.totalEmails - a.totalEmails);
+    },
+
+    displayDomainResults() {
+        const resultsList = document.getElementById('deleteResultsList');
+
+        this.domainGroups.forEach((group, i) => {
+            const isExpanded = this.expandedDomains.has(group.domain);
+            const domainRow = this.createDomainRow(group, i, isExpanded);
+            resultsList.appendChild(domainRow);
+
+            if (isExpanded) {
+                const sendersTable = this.createSendersTable(group);
+                resultsList.appendChild(sendersTable);
+            }
+        });
+    },
+
+    createDomainRow(group, index, isExpanded) {
+        const row = document.createElement('div');
+        row.className = 'result-item domain-row' + (isExpanded ? ' expanded' : '');
+        row.dataset.domain = group.domain;
+
+        const dateRange = this.formatDateRange(group.firstDate, group.lastDate);
+        const dateRangeDisplay = dateRange ? `<div class="result-date-range">${dateRange}</div>` : '';
+
+        const sendersTooltip = group.uniqueSenders.join('\n');
+        const recipientsTooltip = group.uniqueRecipients.join('\n');
+
+        row.innerHTML = `
+            <label class="checkbox-wrapper result-checkbox">
+                <input type="checkbox" class="domain-cb" data-domain="${GmailCleaner.UI.escapeHtml(group.domain)}" data-index="${index}">
+                <span class="checkmark"></span>
+            </label>
+            <button class="expand-toggle" onclick="GmailCleaner.Delete.toggleDomainExpand('${GmailCleaner.UI.escapeHtml(group.domain)}')">
+                <svg viewBox="0 0 24 24" width="18" height="18">
+                    <path fill="currentColor" d="${isExpanded ? 'M7 10l5 5 5-5H7z' : 'M10 17l5-5-5-5v10z'}"/>
+                </svg>
+            </button>
+            <div class="result-content" onclick="GmailCleaner.Delete.toggleDomainExpand('${GmailCleaner.UI.escapeHtml(group.domain)}')" style="cursor: pointer;">
+                <div class="result-sender domain-name">${GmailCleaner.UI.escapeHtml(group.domain)}</div>
+                <div class="domain-pills">
+                    <span class="pill sender-pill" data-tooltip="${GmailCleaner.UI.escapeHtml(sendersTooltip)}">${group.uniqueSenders.length} sender${group.uniqueSenders.length !== 1 ? 's' : ''}</span>
+                    ${group.uniqueRecipients.length > 0 ? `<span class="pill recipient-pill" data-tooltip="${GmailCleaner.UI.escapeHtml(recipientsTooltip)}">${group.uniqueRecipients.length} recipient${group.uniqueRecipients.length !== 1 ? 's' : ''}</span>` : ''}
+                </div>
+                <div class="result-meta">
+                    ${dateRangeDisplay}
+                    <span class="result-count">${group.totalEmails} emails</span>
+                </div>
+            </div>
+            <div class="result-actions">
+                <button class="unsub-btn delete-btn" id="delete-domain-${index}" onclick="GmailCleaner.Delete.deleteDomainEmails('${GmailCleaner.UI.escapeHtml(group.domain)}')">
+                    Delete ${group.totalEmails}
+                </button>
+            </div>
+        `;
+
+        return row;
+    },
+
+    createSendersTable(group) {
+        const container = document.createElement('div');
+        container.className = 'domain-senders-container';
+        container.dataset.domain = group.domain;
+
+        // Sort senders by count
+        const sortedSenders = [...group.senders].sort((a, b) => b.count - a.count);
+
+        sortedSenders.forEach(sender => {
+            const originalIndex = GmailCleaner.deleteResults.indexOf(sender);
+            const recipientsTooltip = (sender.recipients || []).join('\n');
+
+            const senderRow = document.createElement('div');
+            senderRow.className = 'result-item sender-row nested';
+            senderRow.innerHTML = `
+                <label class="checkbox-wrapper result-checkbox">
+                    <input type="checkbox" class="delete-cb sender-cb" data-index="${originalIndex}" data-email="${GmailCleaner.UI.escapeHtml(sender.email)}" data-domain="${GmailCleaner.UI.escapeHtml(group.domain)}">
+                    <span class="checkmark"></span>
+                </label>
+                <div class="result-content">
+                    <div class="result-sender">${GmailCleaner.UI.escapeHtml(sender.email)}</div>
+                    ${sender.recipients && sender.recipients.length > 0 ? `<span class="pill recipient-pill small" data-tooltip="${GmailCleaner.UI.escapeHtml(recipientsTooltip)}">${sender.recipients.length}</span>` : ''}
+                    <div class="result-meta">
+                        <span class="result-count">${sender.count} emails</span>
+                    </div>
+                </div>
+                <div class="result-actions">
+                    <button class="unsub-btn delete-btn" id="delete-${originalIndex}" onclick="GmailCleaner.Delete.deleteSenderEmails(${originalIndex})">
+                        Delete ${sender.count}
+                    </button>
+                </div>
+            `;
+            container.appendChild(senderRow);
+        });
+
+        return container;
+    },
+
+    toggleDomainExpand(domain) {
+        if (this.expandedDomains.has(domain)) {
+            this.expandedDomains.delete(domain);
+        } else {
+            this.expandedDomains.add(domain);
+        }
+        this.displayResults();
+    },
+
+    async deleteDomainEmails(domain) {
+        const group = this.domainGroups.find(g => g.domain === domain);
+        if (!group) return;
+
+        const senderEmails = group.senders.map(s => s.email);
+        const totalEmails = group.totalEmails;
+
+        if (!confirm(`Delete ALL ${totalEmails} emails from ${senderEmails.length} senders in ${domain}?\n\nThis will move them to Trash.`)) {
+            return;
+        }
+
+        // Show bulk delete overlay
+        this.showDeleteOverlay(senderEmails.length, totalEmails);
+
+        try {
+            await fetch('/api/delete-domain', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ domain: domain, senders: senderEmails })
+            });
+
+            // Poll for progress using the same bulk delete status
+            this.pollDomainDeleteProgress(domain, senderEmails);
+        } catch (error) {
+            this.hideDeleteOverlay();
+            alert('Error: ' + error.message);
+        }
+    },
+
+    async pollDomainDeleteProgress(domain, senderEmails) {
+        try {
+            const response = await fetch('/api/delete-bulk-status');
+            const status = await response.json();
+
+            this.updateDeleteOverlay(status);
+
+            if (status.done) {
+                this.hideDeleteOverlay();
+
+                if (!status.error) {
+                    const deletedCount = status.deleted_count || 0;
+                    GmailCleaner.UI.showSuccessToast(`Deleted ${deletedCount.toLocaleString()} emails from ${domain}`);
+
+                    // Refresh results
+                    setTimeout(async () => {
+                        const resultsResponse = await fetch('/api/delete-scan-results');
+                        GmailCleaner.deleteResults = await resultsResponse.json();
+                        this.displayResults();
+                        document.getElementById('deleteSelectAll').checked = false;
+                    }, 1000);
+                } else {
+                    alert('Error: ' + status.error);
+                }
+            } else {
+                setTimeout(() => this.pollDomainDeleteProgress(domain, senderEmails), 300);
+            }
+        } catch (error) {
+            setTimeout(() => this.pollDomainDeleteProgress(domain, senderEmails), 500);
+        }
+    },
+
     setActionButtonsEnabled(enabled) {
         const buttons = [
             'applyLabelBtn',
@@ -224,9 +470,23 @@ GmailCleaner.Delete = {
 
     toggleSelectAll() {
         const selectAll = document.getElementById('deleteSelectAll');
-        document.querySelectorAll('.delete-cb').forEach(cb => {
-            cb.checked = selectAll.checked;
-        });
+        const checked = selectAll.checked;
+
+        if (this.groupByDomain) {
+            // In domain view, select domain checkboxes
+            document.querySelectorAll('.domain-cb').forEach(cb => {
+                cb.checked = checked;
+            });
+            // Also select nested sender checkboxes if visible
+            document.querySelectorAll('.sender-cb').forEach(cb => {
+                cb.checked = checked;
+            });
+        } else {
+            // In flat view, select all sender checkboxes
+            document.querySelectorAll('.delete-cb').forEach(cb => {
+                cb.checked = checked;
+            });
+        }
     },
 
     async deleteSenderEmails(index) {
@@ -279,31 +539,68 @@ GmailCleaner.Delete = {
     },
 
     async deleteSelected() {
-        const checkboxes = document.querySelectorAll('.delete-cb:checked');
-        if (checkboxes.length === 0) {
+        let totalEmails = 0;
+        const senderEmails = [];
+        const senderSet = new Set(); // Avoid duplicates
+
+        if (this.groupByDomain) {
+            // Collect from checked domains
+            document.querySelectorAll('.domain-cb:checked').forEach(cb => {
+                const domain = cb.dataset.domain;
+                const group = this.domainGroups.find(g => g.domain === domain);
+                if (group) {
+                    group.senders.forEach(s => {
+                        if (!senderSet.has(s.email)) {
+                            senderSet.add(s.email);
+                            senderEmails.push(s.email);
+                            totalEmails += s.count;
+                        }
+                    });
+                }
+            });
+
+            // Also collect from individually checked senders (in expanded domains)
+            document.querySelectorAll('.sender-cb:checked').forEach(cb => {
+                const email = cb.dataset.email;
+                if (!senderSet.has(email)) {
+                    senderSet.add(email);
+                    const index = parseInt(cb.dataset.index);
+                    const r = GmailCleaner.deleteResults[index];
+                    senderEmails.push(email);
+                    totalEmails += r.count;
+                }
+            });
+        } else {
+            // Flat view - collect from checked senders
+            document.querySelectorAll('.delete-cb:checked').forEach(cb => {
+                const index = parseInt(cb.dataset.index);
+                const r = GmailCleaner.deleteResults[index];
+                totalEmails += r.count;
+                senderEmails.push(r.email);
+            });
+        }
+
+        if (senderEmails.length === 0) {
             alert('Please select at least one sender to delete emails from.');
             return;
         }
 
-        let totalEmails = 0;
-        const senderEmails = [];
-        checkboxes.forEach(cb => {
-            const index = parseInt(cb.dataset.index);
-            const r = GmailCleaner.deleteResults[index];
-            totalEmails += r.count;
-            senderEmails.push(r.email);
-        });
-
-        if (!confirm(`Delete ${totalEmails} emails from ${checkboxes.length} senders?\n\nThis will move them to Trash.`)) {
+        if (!confirm(`Delete ${totalEmails} emails from ${senderEmails.length} senders?\n\nThis will move them to Trash.`)) {
             return;
         }
 
         // Show bulk delete overlay with progress bar
-        this.showDeleteOverlay(checkboxes.length, totalEmails);
+        this.showDeleteOverlay(senderEmails.length, totalEmails);
 
-        checkboxes.forEach(cb => {
-            const index = parseInt(cb.dataset.index);
-            const btn = document.getElementById('delete-' + index);
+        // Collect sender info for button updates
+        const senderInfoList = senderEmails.map(email => {
+            const index = GmailCleaner.deleteResults.findIndex(r => r.email === email);
+            return { email, index, count: GmailCleaner.deleteResults[index]?.count || 0 };
+        }).filter(info => info.index >= 0);
+
+        // Update buttons to show deleting state
+        senderInfoList.forEach(info => {
+            const btn = document.getElementById('delete-' + info.index);
             if (btn) {
                 btn.disabled = true;
                 btn.classList.add('btn-deleting');
@@ -325,14 +622,14 @@ GmailCleaner.Delete = {
             });
 
             // Poll for progress
-            this.pollDeleteProgress(checkboxes);
+            this.pollDeleteProgress(senderInfoList);
         } catch (error) {
             this.hideDeleteOverlay();
             alert('Error: ' + error.message);
         }
     },
 
-    async pollDeleteProgress(checkboxes) {
+    async pollDeleteProgress(senderInfoList) {
         try {
             const response = await fetch('/api/delete-bulk-status');
             const status = await response.json();
@@ -342,15 +639,11 @@ GmailCleaner.Delete = {
 
             if (status.done) {
                 this.hideDeleteOverlay();
-                console.log('[BulkDelete] Done. Status:', JSON.stringify(status));
-                console.log('[BulkDelete] Checkboxes count:', checkboxes.length);
 
                 if (!status.error) {
                     const deletedCount = status.deleted_count || 0;
-                    checkboxes.forEach(cb => {
-                        const index = parseInt(cb.dataset.index);
-                        const btn = document.getElementById('delete-' + index);
-                        console.log(`[BulkDelete] Updating button delete-${index}: btn found =`, !!btn);
+                    senderInfoList.forEach(info => {
+                        const btn = document.getElementById('delete-' + info.index);
                         if (btn) {
                             btn.classList.remove('btn-deleting');
                             btn.innerHTML = '✓ Deleted!';
@@ -358,35 +651,30 @@ GmailCleaner.Delete = {
                         }
                     });
 
-                    GmailCleaner.UI.showSuccessToast(`Deleted ${deletedCount.toLocaleString()} emails from ${checkboxes.length} senders`);
+                    GmailCleaner.UI.showSuccessToast(`Deleted ${deletedCount.toLocaleString()} emails from ${senderInfoList.length} senders`);
 
                     setTimeout(async () => {
-                        console.log('[BulkDelete] Refreshing results...');
                         const resultsResponse = await fetch('/api/delete-scan-results');
                         GmailCleaner.deleteResults = await resultsResponse.json();
-                        console.log('[BulkDelete] New results count:', GmailCleaner.deleteResults.length);
                         this.displayResults();
                         document.getElementById('deleteSelectAll').checked = false;
                     }, 1000);
                 } else {
-                    console.log('[BulkDelete] Error path:', status.error);
                     alert('Error: ' + status.error);
-                    checkboxes.forEach(cb => {
-                        const index = parseInt(cb.dataset.index);
-                        const r = GmailCleaner.deleteResults[index];
-                        const btn = document.getElementById('delete-' + index);
+                    senderInfoList.forEach(info => {
+                        const btn = document.getElementById('delete-' + info.index);
                         if (btn) {
                             btn.classList.remove('btn-deleting');
                             btn.disabled = false;
-                            btn.innerHTML = `Delete ${r.count}`;
+                            btn.innerHTML = `Delete ${info.count}`;
                         }
                     });
                 }
             } else {
-                setTimeout(() => this.pollDeleteProgress(checkboxes), 300);
+                setTimeout(() => this.pollDeleteProgress(senderInfoList), 300);
             }
         } catch (error) {
-            setTimeout(() => this.pollDeleteProgress(checkboxes), 500);
+            setTimeout(() => this.pollDeleteProgress(senderInfoList), 500);
         }
     },
 
