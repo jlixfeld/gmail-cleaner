@@ -395,32 +395,30 @@ GmailCleaner.Delete = {
         const group = this.domainGroups.find(g => g.domain === domain);
         if (!group) return;
 
-        const senderEmails = group.senders.map(s => s.email);
-        const totalEmails = group.totalEmails;
-
-        if (!confirm(`Delete ALL ${totalEmails} emails from ${senderEmails.length} senders in ${domain}?\n\nThis will move them to Trash.`)) {
+        // Note: We query Gmail directly for ALL emails, so actual count may be higher than cached
+        if (!confirm(`Delete ALL emails from @${domain}?\n\nThis queries Gmail directly and will delete ALL matching emails, including any that arrived after scanning.\n\nThis will move them to Trash.`)) {
             return;
         }
 
         // Show bulk delete overlay
-        this.showDeleteOverlay(senderEmails.length, totalEmails);
+        this.showDeleteOverlay(1, group.totalEmails);
 
         try {
             await fetch('/api/delete-domain', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ domain: domain, senders: senderEmails })
+                body: JSON.stringify({ domain: domain })
             });
 
             // Poll for progress using the same bulk delete status
-            this.pollDomainDeleteProgress(domain, senderEmails);
+            this.pollDomainDeleteProgress(domain);
         } catch (error) {
             this.hideDeleteOverlay();
             alert('Error: ' + error.message);
         }
     },
 
-    async pollDomainDeleteProgress(domain, senderEmails) {
+    async pollDomainDeleteProgress(domain) {
         try {
             const response = await fetch('/api/delete-bulk-status');
             const status = await response.json();
@@ -432,7 +430,7 @@ GmailCleaner.Delete = {
 
                 if (!status.error) {
                     const deletedCount = status.deleted_count || 0;
-                    GmailCleaner.UI.showSuccessToast(`Deleted ${deletedCount.toLocaleString()} emails from ${domain}`);
+                    GmailCleaner.UI.showSuccessToast(`Deleted ${deletedCount.toLocaleString()} emails from @${domain}`);
 
                     // Refresh results
                     setTimeout(async () => {
@@ -445,10 +443,10 @@ GmailCleaner.Delete = {
                     alert('Error: ' + status.error);
                 }
             } else {
-                setTimeout(() => this.pollDomainDeleteProgress(domain, senderEmails), 300);
+                setTimeout(() => this.pollDomainDeleteProgress(domain), 300);
             }
         } catch (error) {
-            setTimeout(() => this.pollDomainDeleteProgress(domain, senderEmails), 500);
+            setTimeout(() => this.pollDomainDeleteProgress(domain), 500);
         }
     },
 

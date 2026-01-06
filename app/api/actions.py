@@ -46,6 +46,7 @@ from app.services import (
     scan_senders_for_delete,
     delete_emails_by_sender,
     delete_emails_bulk_background,
+    delete_domain_emails_background,
     download_emails_background,
     create_label,
     delete_label,
@@ -172,13 +173,13 @@ async def api_delete_emails_bulk(
 async def api_delete_domain(
     request: Request, body: DeleteDomainRequest, background_tasks: BackgroundTasks
 ):
-    """Delete emails from all senders in a domain (background task with progress)."""
-    if not body.senders:
+    """Delete ALL emails from a domain by querying Gmail directly."""
+    if not body.domain:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="At least one sender is required",
+            detail="Domain is required",
         )
-    background_tasks.add_task(delete_emails_bulk_background, body.senders)
+    background_tasks.add_task(delete_domain_emails_background, body.domain)
     return {"status": "started"}
 
 

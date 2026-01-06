@@ -29,11 +29,8 @@ from .gmail import (
     delete_emails_by_sender,
     delete_emails_bulk,
     delete_emails_bulk_background,
+    delete_domain_emails_background,
     get_delete_bulk_status,
-    build_known_senders_cache,
-    scan_unknown_senders_for_delete,
-    get_known_senders_status,
-    # Download
     download_emails_background,
     get_download_status,
     get_download_csv,

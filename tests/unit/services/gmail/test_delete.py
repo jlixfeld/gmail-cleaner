@@ -72,8 +72,7 @@ class TestScanSendersForDelete:
         assert status["error"] is None
 
     @patch("app.services.gmail.delete.get_gmail_service")
-    @patch("app.services.gmail.delete.time.sleep")
-    def test_successful_scan(self, _mock_sleep, mock_get_service):
+    def test_successful_scan(self, mock_get_service):
         """Successful scan should return grouped senders with correct counts."""
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)
@@ -505,81 +504,80 @@ class TestDeleteEmailsBySender:
         assert result["success"] is False
         assert "Invalid sender format" in result["message"]
 
-    def test_valid_email_format_no_scan_results(self):
-        """Valid email without scan results should fail with message."""
-        result = delete_emails_by_sender("user@example.com")
-        assert result["success"] is False
-        assert "scan" in result["message"].lower()
+    @patch("app.services.gmail.delete.get_gmail_service")
+    def test_valid_email_format_queries_gmail(self, mock_get_service):
+        """Valid email should query Gmail directly for message IDs."""
+        mock_service = Mock()
+        mock_get_service.return_value = (mock_service, None)
 
-    def test_valid_email_format_empty_message_ids(self):
-        """Valid email with empty message_ids should return no emails found."""
-        # Set up scan results with empty message_ids
-        state.set_delete_scan_results(
-            [
-                {
-                    "email": "user@example.com",
-                    "message_ids": [],
-                    "count": 0,
-                    "total_size": 0,
-                }
-            ]
+        # Mock messages.list to return no emails
+        mock_list = Mock()
+        mock_list.execute.return_value = {"messages": []}
+        mock_service.users.return_value.messages.return_value.list.return_value = (
+            mock_list
         )
 
         result = delete_emails_by_sender("user@example.com")
         assert result["success"] is True
         assert result["message"] == "No emails found"
 
-    def test_valid_domain_format_no_scan_results(self):
-        """Valid domain without scan results should fail with message."""
+    @patch("app.services.gmail.delete.get_gmail_service")
+    def test_valid_email_no_emails_from_gmail(self, mock_get_service):
+        """When Gmail returns no emails, should return success with 0 deleted."""
+        mock_service = Mock()
+        mock_get_service.return_value = (mock_service, None)
+
+        # Mock messages.list to return empty
+        mock_list = Mock()
+        mock_list.execute.return_value = {"messages": []}
+        mock_service.users.return_value.messages.return_value.list.return_value = (
+            mock_list
+        )
+
+        result = delete_emails_by_sender("user@example.com")
+        assert result["success"] is True
+        assert result["message"] == "No emails found"
+
+    @patch("app.services.gmail.delete.get_gmail_service")
+    def test_valid_domain_queries_gmail(self, mock_get_service):
+        """Valid domain should query Gmail directly for message IDs."""
+        mock_service = Mock()
+        mock_get_service.return_value = (mock_service, None)
+
+        # Mock messages.list to return no emails
+        mock_list = Mock()
+        mock_list.execute.return_value = {"messages": []}
+        mock_service.users.return_value.messages.return_value.list.return_value = (
+            mock_list
+        )
+
         result = delete_emails_by_sender("example.com")
-        assert result["success"] is False
-        assert "scan" in result["message"].lower()
+        assert result["success"] is True
+        assert result["message"] == "No emails found"
 
     @patch("app.services.gmail.delete.get_gmail_service")
     def test_auth_error(self, mock_get_service):
         """Auth error should return failure."""
         mock_get_service.return_value = (None, "Auth failed")
 
-        # Set up scan results first
-        state.set_delete_scan_results(
-            [
-                {
-                    "email": "user@example.com",
-                    "message_ids": ["msg1", "msg2"],
-                    "count": 2,
-                    "total_size": 1000,
-                }
-            ]
-        )
-
         result = delete_emails_by_sender("user@example.com")
 
         assert result["success"] is False
         assert result["message"] == "Auth failed"
 
-    def test_no_scan_results(self):
-        """No scan results should return failure with message."""
-        result = delete_emails_by_sender("sender@example.com")
-
-        assert result["success"] is False
-        assert "scan" in result["message"].lower()
-
     @patch("app.services.gmail.delete.get_gmail_service")
     def test_successful_delete(self, mock_get_service):
-        """Successful delete should return correct count using cached message_ids."""
+        """Successful delete should query Gmail and delete found emails."""
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)
 
-        # Set up scan results with message_ids
-        state.set_delete_scan_results(
-            [
-                {
-                    "email": "sender@example.com",
-                    "message_ids": [f"msg{i}" for i in range(5)],
-                    "count": 5,
-                    "total_size": 5000,
-                }
-            ]
+        # Mock messages.list to return 5 emails
+        mock_list = Mock()
+        mock_list.execute.return_value = {
+            "messages": [{"id": f"msg{i}"} for i in range(5)]
+        }
+        mock_service.users.return_value.messages.return_value.list.return_value = (
+            mock_list
         )
 
         # Mock batch modify
@@ -593,20 +591,17 @@ class TestDeleteEmailsBySender:
 
     @patch("app.services.gmail.delete.get_gmail_service")
     def test_delete_with_many_messages(self, mock_get_service):
-        """Delete should handle batching of many cached message_ids."""
+        """Delete should handle batching of many messages from Gmail."""
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)
 
-        # Set up scan results with 150 message_ids (more than batch size of 100)
-        state.set_delete_scan_results(
-            [
-                {
-                    "email": "sender@example.com",
-                    "message_ids": [f"msg{i}" for i in range(150)],
-                    "count": 150,
-                    "total_size": 150000,
-                }
-            ]
+        # Mock messages.list to return 150 emails
+        mock_list = Mock()
+        mock_list.execute.return_value = {
+            "messages": [{"id": f"msg{i}"} for i in range(150)]
+        }
+        mock_service.users.return_value.messages.return_value.list.return_value = (
+            mock_list
         )
 
         # Mock batch modify
@@ -620,19 +615,17 @@ class TestDeleteEmailsBySender:
     @patch("app.services.gmail.delete.get_gmail_service")
     def test_delete_updates_cached_results(self, mock_get_service):
         """Delete should remove sender from cached results."""
-        # Set up cached results with message_ids
+        # Set up cached results (no message_ids - we query Gmail now)
         state.set_delete_scan_results(
             [
                 {
                     "email": "keep@example.com",
                     "count": 5,
-                    "message_ids": ["k1", "k2"],
                     "total_size": 500,
                 },
                 {
                     "email": "delete@example.com",
                     "count": 10,
-                    "message_ids": ["d1", "d2"],
                     "total_size": 1000,
                 },
             ]
@@ -640,6 +633,14 @@ class TestDeleteEmailsBySender:
 
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)
+
+        # Mock messages.list to return emails
+        mock_list = Mock()
+        mock_list.execute.return_value = {"messages": [{"id": "d1"}, {"id": "d2"}]}
+        mock_service.users.return_value.messages.return_value.list.return_value = (
+            mock_list
+        )
+
         mock_service.users.return_value.messages.return_value.batchModify.return_value.execute.return_value = {}
 
         delete_emails_by_sender("delete@example.com")
@@ -654,17 +655,23 @@ class TestDeleteEmailsBySender:
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)
 
-        # Set up scan results with list_id (mailing list)
-        state.set_delete_scan_results(
-            [
-                {
-                    "email": "sender@example.com",
-                    "list_id": "test.lists.example.org",
-                    "message_ids": [f"msg{i}" for i in range(5)],
-                    "count": 5,
-                    "total_size": 5000,
-                }
-            ]
+        # Set up scan results with list_id (for subscription scan)
+        state.scan_results = [
+            {
+                "email": "sender@example.com",
+                "list_id": "test.lists.example.org",
+                "count": 5,
+                "total_size": 5000,
+            }
+        ]
+
+        # Mock messages.list to return 5 emails
+        mock_list = Mock()
+        mock_list.execute.return_value = {
+            "messages": [{"id": f"msg{i}"} for i in range(5)]
+        }
+        mock_service.users.return_value.messages.return_value.list.return_value = (
+            mock_list
         )
 
         mock_service.users.return_value.messages.return_value.batchModify.return_value.execute.return_value = {}
@@ -676,63 +683,69 @@ class TestDeleteEmailsBySender:
         assert "Moved 5 emails to trash" in result["message"]
 
     @patch("app.services.gmail.delete.get_gmail_service")
-    def test_delete_by_list_id_updates_cached_results(self, mock_get_service):
-        """Delete by list_id should remove entry from cached results."""
-        state.set_delete_scan_results(
-            [
-                {
-                    "email": "keep@example.com",
-                    "count": 5,
-                    "message_ids": ["k1", "k2"],
-                    "total_size": 500,
-                },
-                {
-                    "email": "sender@example.com",
-                    "list_id": "delete.lists.example.org",
-                    "count": 10,
-                    "message_ids": ["d1", "d2"],
-                    "total_size": 1000,
-                },
-            ]
-        )
+    def test_delete_by_list_id_queries_and_deletes(self, mock_get_service):
+        """Delete by list_id should query Gmail and delete found emails."""
+        # Set up subscription scan results (where list_id entries live)
+        state.scan_results = [
+            {
+                "email": "sender@example.com",
+                "list_id": "delete.lists.example.org",
+                "count": 10,
+            }
+        ]
 
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)
+
+        # Mock messages.list to return emails
+        mock_list = Mock()
+        mock_list.execute.return_value = {"messages": [{"id": "d1"}, {"id": "d2"}]}
+        mock_service.users.return_value.messages.return_value.list.return_value = (
+            mock_list
+        )
+
         mock_service.users.return_value.messages.return_value.batchModify.return_value.execute.return_value = {}
 
-        delete_emails_by_sender("", list_id="delete.lists.example.org")
+        result = delete_emails_by_sender("", list_id="delete.lists.example.org")
 
-        results = get_delete_scan_results()
-        assert len(results) == 1
-        assert results[0]["email"] == "keep@example.com"
+        assert result["success"] is True
+        assert result["deleted"] == 2
 
-    def test_list_id_not_found_in_cache(self):
-        """Delete with non-existent list_id should fail with message."""
-        state.set_delete_scan_results([])
-        result = delete_emails_by_sender("", list_id="nonexistent.lists.example.org")
+    @patch("app.services.gmail.delete.get_gmail_service")
+    def test_list_id_queries_gmail(self, mock_get_service):
+        """Delete with list_id should query Gmail directly."""
+        mock_service = Mock()
+        mock_get_service.return_value = (mock_service, None)
 
-        assert result["success"] is False
-        assert "nonexistent.lists.example.org" in result["message"]
-        assert "scan" in result["message"].lower()
+        # Set up subscription scan results
+        state.scan_results = [
+            {
+                "email": "sender@example.com",
+                "list_id": "test.lists.example.org",
+                "count": 5,
+            }
+        ]
+
+        # Mock messages.list to return no emails
+        mock_list = Mock()
+        mock_list.execute.return_value = {"messages": []}
+        mock_service.users.return_value.messages.return_value.list.return_value = (
+            mock_list
+        )
+
+        result = delete_emails_by_sender("", list_id="test.lists.example.org")
+
+        assert result["success"] is True
+        assert result["message"] == "No emails found"
 
     @patch("app.services.gmail.delete.get_gmail_service")
     def test_exception_handling(self, mock_get_service):
         """Exceptions should be caught and returned as error."""
-        # Set up scan results first
-        state.set_delete_scan_results(
-            [
-                {
-                    "email": "sender@example.com",
-                    "message_ids": ["msg1", "msg2"],
-                    "count": 2,
-                    "total_size": 1000,
-                }
-            ]
-        )
-
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)
-        mock_service.users.return_value.messages.return_value.batchModify.return_value.execute.side_effect = Exception(
+
+        # Mock messages.list to raise exception
+        mock_service.users.return_value.messages.return_value.list.return_value.execute.side_effect = Exception(
             "API Error"
         )
 
@@ -742,42 +755,28 @@ class TestDeleteEmailsBySender:
         assert result["message"] == "API Error"
 
     def test_domain_pattern_validation(self):
-        """Valid domain patterns should be accepted."""
-        # Valid domain should not fail format validation
-        # (will fail because no scan results, but that's a different error)
-        result = delete_emails_by_sender("example.com")
-        assert "Invalid sender format" not in result["message"]
+        """Valid domain patterns should be accepted for format validation."""
+        # Test input validation only - invalid patterns should fail
+        result_invalid = delete_emails_by_sender("not-valid")
+        assert "Invalid sender format" in result_invalid["message"]
 
-        result = delete_emails_by_sender("sub.example.com")
-        assert "Invalid sender format" not in result["message"]
+    @patch("app.services.gmail.delete.get_gmail_service")
+    def test_sender_case_preserved_in_query(self, mock_get_service):
+        """Sender should be passed to Gmail query as provided."""
+        mock_service = Mock()
+        mock_get_service.return_value = (mock_service, None)
 
-        result = delete_emails_by_sender("company.co.uk")
-        assert "Invalid sender format" not in result["message"]
-
-    def test_sender_case_sensitivity(self):
-        """Sender lookup should be case-sensitive for email matching."""
-        state.set_delete_scan_results(
-            [
-                {
-                    "email": "UPPER@example.com",
-                    "message_ids": ["msg1"],
-                    "count": 1,
-                    "total_size": 1000,
-                }
-            ]
+        # Mock messages.list
+        mock_list = Mock()
+        mock_list.execute.return_value = {"messages": []}
+        mock_service.users.return_value.messages.return_value.list.return_value = (
+            mock_list
         )
 
-        # Exact case should find it
-        result = delete_emails_by_sender("UPPER@example.com")
-        # Will fail because no gmail service mock, but should find the entry
-        assert (
-            "scan" not in result["message"].lower()
-            or result["message"] != "No scan results found. Please scan first."
-        )
+        delete_emails_by_sender("UPPER@example.com")
 
-        # Different case should not find it (case sensitive)
-        result_lower = delete_emails_by_sender("upper@example.com")
-        assert "scan" in result_lower["message"].lower()
+        # Verify the query was made
+        mock_service.users.return_value.messages.return_value.list.assert_called()
 
 
 class TestDeleteEmailsBulk:
@@ -849,24 +848,34 @@ class TestDeleteEmailsBulk:
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)
 
-        # Set up scan results with multiple senders from same domain
+        # Set up scan results (for cache cleanup)
         state.set_delete_scan_results(
             [
                 {
                     "email": "sender1@same-domain.com",
                     "domain": "same-domain.com",
-                    "message_ids": ["s1a", "s1b"],
                     "count": 2,
                     "total_size": 2000,
                 },
                 {
                     "email": "sender2@same-domain.com",
                     "domain": "same-domain.com",
-                    "message_ids": ["s2a", "s2b", "s2c"],
                     "count": 3,
                     "total_size": 3000,
                 },
             ]
+        )
+
+        # Mock messages.list to return different counts for each sender
+        mock_list = Mock()
+        mock_list.execute.side_effect = [
+            {"messages": [{"id": "s1a"}, {"id": "s1b"}]},  # 2 for sender1
+            {
+                "messages": [{"id": "s2a"}, {"id": "s2b"}, {"id": "s2c"}]
+            },  # 3 for sender2
+        ]
+        mock_service.users.return_value.messages.return_value.list.return_value = (
+            mock_list
         )
 
         mock_service.users.return_value.messages.return_value.batchModify.return_value.execute.return_value = {}
@@ -890,25 +899,32 @@ class TestDeleteEmailsBulk:
                 {
                     "email": "delete1@example.com",
                     "domain": "example.com",
-                    "message_ids": ["d1"],
                     "count": 1,
                     "total_size": 1000,
                 },
                 {
                     "email": "delete2@example.com",
                     "domain": "example.com",
-                    "message_ids": ["d2"],
                     "count": 1,
                     "total_size": 1000,
                 },
                 {
                     "email": "keep@other.com",
                     "domain": "other.com",
-                    "message_ids": ["k1"],
                     "count": 1,
                     "total_size": 1000,
                 },
             ]
+        )
+
+        # Mock messages.list
+        mock_list = Mock()
+        mock_list.execute.side_effect = [
+            {"messages": [{"id": "d1"}]},  # for delete1
+            {"messages": [{"id": "d2"}]},  # for delete2
+        ]
+        mock_service.users.return_value.messages.return_value.list.return_value = (
+            mock_list
         )
 
         mock_service.users.return_value.messages.return_value.batchModify.return_value.execute.return_value = {}
@@ -960,12 +976,16 @@ class TestDeleteEmailsBulkBackground:
 
     @patch("app.services.gmail.delete.get_gmail_service")
     def test_no_emails_found(self, mock_get_service):
-        """No emails found (no scan results) should complete without error."""
+        """No emails found from Gmail should complete without error."""
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)
 
-        # No scan results for this sender
-        state.set_delete_scan_results([])
+        # Mock messages.list to return empty
+        mock_list = Mock()
+        mock_list.execute.return_value = {"messages": []}
+        mock_service.users.return_value.messages.return_value.list.return_value = (
+            mock_list
+        )
 
         delete_emails_bulk_background(["sender@example.com"])
 
@@ -976,20 +996,17 @@ class TestDeleteEmailsBulkBackground:
 
     @patch("app.services.gmail.delete.get_gmail_service")
     def test_successful_bulk_delete(self, mock_get_service):
-        """Successful bulk delete should update status correctly using cached message_ids."""
+        """Successful bulk delete should query Gmail and delete found emails."""
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)
 
-        # Set up scan results with message_ids
-        state.set_delete_scan_results(
-            [
-                {
-                    "email": "sender@example.com",
-                    "message_ids": [f"msg{i}" for i in range(10)],
-                    "count": 10,
-                    "total_size": 10000,
-                }
-            ]
+        # Mock messages.list to return 10 emails
+        mock_list = Mock()
+        mock_list.execute.return_value = {
+            "messages": [{"id": f"msg{i}"} for i in range(10)]
+        }
+        mock_service.users.return_value.messages.return_value.list.return_value = (
+            mock_list
         )
 
         # Mock batch modify
@@ -1011,13 +1028,11 @@ class TestDeleteEmailsBulkBackground:
                 {
                     "email": "keep@example.com",
                     "count": 5,
-                    "message_ids": ["k1"],
                     "total_size": 500,
                 },
                 {
                     "email": "delete@example.com",
                     "count": 10,
-                    "message_ids": ["d1", "d2"],
                     "total_size": 1000,
                 },
             ]
@@ -1025,6 +1040,14 @@ class TestDeleteEmailsBulkBackground:
 
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)
+
+        # Mock messages.list to return emails
+        mock_list = Mock()
+        mock_list.execute.return_value = {"messages": [{"id": "d1"}, {"id": "d2"}]}
+        mock_service.users.return_value.messages.return_value.list.return_value = (
+            mock_list
+        )
+
         mock_service.users.return_value.messages.return_value.batchModify.return_value.execute.return_value = {}
 
         delete_emails_bulk_background(["delete@example.com"])

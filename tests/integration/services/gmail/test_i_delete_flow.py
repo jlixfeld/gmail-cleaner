@@ -41,13 +41,13 @@ class TestScanToDeleteFlow:
 
     @patch("app.services.gmail.delete.get_gmail_service")
     def test_full_flow_output_structure(self, mock_get_service):
-        """Full flow should populate all required fields in output."""
+        """Full flow should populate all required fields in output (except message_ids)."""
         self._setup_mock_service(mock_get_service, DELETE_SCAN_MESSAGES)
 
         scan_senders_for_delete(limit=100)
         results = get_delete_scan_results()
 
-        # Verify structure of each result
+        # Verify structure of each result (message_ids no longer included)
         for result in results:
             assert "email" in result
             assert "domain" in result
@@ -55,7 +55,6 @@ class TestScanToDeleteFlow:
             assert "total_size" in result
             assert "subjects" in result
             assert "recipients" in result
-            assert "message_ids" in result
             assert "first_date" in result
             assert "last_date" in result
             assert "sender" in result
@@ -75,7 +74,6 @@ class TestScanToDeleteFlow:
         sender1 = next(r for r in results if r["email"] == "sender1@example.com")
         assert sender1["count"] == 3
         assert sender1["domain"] == "example.com"
-        assert len(sender1["message_ids"]) == 3
 
         sender2 = next(r for r in results if r["email"] == "sender2@example.com")
         assert sender2["count"] == 2
@@ -333,14 +331,13 @@ class TestDeleteFlow:
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)
 
-        # Set up scan results directly
+        # Set up scan results (no message_ids)
         state.set_delete_scan_results(
             [
                 {
                     "email": "delete@example.com",
                     "domain": "example.com",
                     "count": 3,
-                    "message_ids": ["d1", "d2", "d3"],
                     "total_size": 3000,
                     "sender": "Delete Sender",
                     "subjects": ["Sub 1"],
@@ -352,7 +349,6 @@ class TestDeleteFlow:
                     "email": "keep@example.com",
                     "domain": "example.com",
                     "count": 2,
-                    "message_ids": ["k1", "k2"],
                     "total_size": 2000,
                     "sender": "Keep Sender",
                     "subjects": ["Sub 2"],
@@ -361,6 +357,15 @@ class TestDeleteFlow:
                     "last_date": None,
                 },
             ]
+        )
+
+        # Mock messages.list to return emails for the delete sender
+        mock_list = Mock()
+        mock_list.execute.return_value = {
+            "messages": [{"id": "d1"}, {"id": "d2"}, {"id": "d3"}]
+        }
+        mock_service.users.return_value.messages.return_value.list.return_value = (
+            mock_list
         )
 
         # Mock batch modify
@@ -390,7 +395,6 @@ class TestDeleteFlow:
                     "email": "delete1@example.com",
                     "domain": "example.com",
                     "count": 2,
-                    "message_ids": ["d1a", "d1b"],
                     "total_size": 2000,
                     "sender": "Delete 1",
                     "subjects": [],
@@ -402,7 +406,6 @@ class TestDeleteFlow:
                     "email": "delete2@example.com",
                     "domain": "example.com",
                     "count": 3,
-                    "message_ids": ["d2a", "d2b", "d2c"],
                     "total_size": 3000,
                     "sender": "Delete 2",
                     "subjects": [],
@@ -414,7 +417,6 @@ class TestDeleteFlow:
                     "email": "keep@other.com",
                     "domain": "other.com",
                     "count": 1,
-                    "message_ids": ["k1"],
                     "total_size": 1000,
                     "sender": "Keep",
                     "subjects": [],
@@ -423,6 +425,16 @@ class TestDeleteFlow:
                     "last_date": None,
                 },
             ]
+        )
+
+        # Mock messages.list to return different emails for each call
+        mock_list = Mock()
+        mock_list.execute.side_effect = [
+            {"messages": [{"id": "d1a"}, {"id": "d1b"}]},  # delete1
+            {"messages": [{"id": "d2a"}, {"id": "d2b"}, {"id": "d2c"}]},  # delete2
+        ]
+        mock_service.users.return_value.messages.return_value.list.return_value = (
+            mock_list
         )
 
         mock_service.users.return_value.messages.return_value.batchModify.return_value.execute.return_value = {}
@@ -468,14 +480,13 @@ class TestDeleteByDomainFlow:
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)
 
-        # Set up scan results with multiple senders from same domain
+        # Set up scan results
         state.set_delete_scan_results(
             [
                 {
                     "email": "sender1@example.com",
                     "domain": "example.com",
                     "count": 3,
-                    "message_ids": ["s1a", "s1b", "s1c"],
                     "total_size": 3000,
                     "sender": "Sender One",
                     "subjects": [],
@@ -487,7 +498,6 @@ class TestDeleteByDomainFlow:
                     "email": "sender2@example.com",
                     "domain": "example.com",
                     "count": 2,
-                    "message_ids": ["s2a", "s2b"],
                     "total_size": 2000,
                     "sender": "Sender Two",
                     "subjects": [],
@@ -499,7 +509,6 @@ class TestDeleteByDomainFlow:
                     "email": "other@different.org",
                     "domain": "different.org",
                     "count": 1,
-                    "message_ids": ["o1"],
                     "total_size": 1000,
                     "sender": "Other",
                     "subjects": [],
@@ -508,6 +517,16 @@ class TestDeleteByDomainFlow:
                     "last_date": None,
                 },
             ]
+        )
+
+        # Mock messages.list
+        mock_list = Mock()
+        mock_list.execute.side_effect = [
+            {"messages": [{"id": "s1a"}, {"id": "s1b"}, {"id": "s1c"}]},  # sender1
+            {"messages": [{"id": "s2a"}, {"id": "s2b"}]},  # sender2
+        ]
+        mock_service.users.return_value.messages.return_value.list.return_value = (
+            mock_list
         )
 
         mock_service.users.return_value.messages.return_value.batchModify.return_value.execute.return_value = {}
@@ -536,7 +555,6 @@ class TestDeleteByDomainFlow:
                     "email": "delete@delete-domain.com",
                     "domain": "delete-domain.com",
                     "count": 2,
-                    "message_ids": ["d1", "d2"],
                     "total_size": 2000,
                     "sender": "Delete",
                     "subjects": [],
@@ -548,7 +566,6 @@ class TestDeleteByDomainFlow:
                     "email": "keep1@keep-domain.com",
                     "domain": "keep-domain.com",
                     "count": 3,
-                    "message_ids": ["k1", "k2", "k3"],
                     "total_size": 3000,
                     "sender": "Keep 1",
                     "subjects": [],
@@ -560,7 +577,6 @@ class TestDeleteByDomainFlow:
                     "email": "keep2@keep-domain.com",
                     "domain": "keep-domain.com",
                     "count": 1,
-                    "message_ids": ["k4"],
                     "total_size": 1000,
                     "sender": "Keep 2",
                     "subjects": [],
@@ -569,6 +585,13 @@ class TestDeleteByDomainFlow:
                     "last_date": None,
                 },
             ]
+        )
+
+        # Mock messages.list
+        mock_list = Mock()
+        mock_list.execute.return_value = {"messages": [{"id": "d1"}, {"id": "d2"}]}
+        mock_service.users.return_value.messages.return_value.list.return_value = (
+            mock_list
         )
 
         mock_service.users.return_value.messages.return_value.batchModify.return_value.execute.return_value = {}
@@ -615,77 +638,44 @@ class TestDeleteByDomainFlow:
 
 
 class TestDeleteSafety:
-    """Critical tests to verify delete operations only affect intended emails."""
+    """Critical tests to verify delete operations query Gmail correctly."""
 
     @patch("app.services.gmail.delete.get_gmail_service")
-    def test_delete_only_specified_sender_message_ids(self, mock_get_service):
-        """Delete should only pass specified sender's message_ids to API."""
+    def test_delete_queries_gmail_with_correct_sender(self, mock_get_service):
+        """Delete should query Gmail with the correct sender in the query."""
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)
 
-        # Set up results with two senders
-        state.set_delete_scan_results(
-            [
-                {
-                    "email": "target@example.com",
-                    "domain": "example.com",
-                    "count": 2,
-                    "message_ids": ["target1", "target2"],
-                    "total_size": 2000,
-                    "sender": "Target",
-                    "subjects": [],
-                    "recipients": [],
-                    "first_date": None,
-                    "last_date": None,
-                },
-                {
-                    "email": "other@example.com",
-                    "domain": "example.com",
-                    "count": 3,
-                    "message_ids": ["other1", "other2", "other3"],
-                    "total_size": 3000,
-                    "sender": "Other",
-                    "subjects": [],
-                    "recipients": [],
-                    "first_date": None,
-                    "last_date": None,
-                },
-            ]
+        # Mock messages.list
+        mock_list = Mock()
+        mock_list.execute.return_value = {
+            "messages": [{"id": "target1"}, {"id": "target2"}]
+        }
+        mock_service.users.return_value.messages.return_value.list.return_value = (
+            mock_list
         )
 
-        mock_batch_modify = Mock()
-        mock_batch_modify.execute.return_value = {}
-        mock_service.users.return_value.messages.return_value.batchModify.return_value = mock_batch_modify
+        mock_service.users.return_value.messages.return_value.batchModify.return_value.execute.return_value = {}
 
-        # Delete only target sender
+        # Delete target sender
         delete_emails_by_sender("target@example.com")
 
-        # Verify batchModify was called with ONLY target's message_ids
-        mock_service.users.return_value.messages.return_value.batchModify.assert_called_once()
-        call_args = (
-            mock_service.users.return_value.messages.return_value.batchModify.call_args
-        )
-        passed_ids = call_args[1]["body"]["ids"]
-
-        assert set(passed_ids) == {"target1", "target2"}
-        assert "other1" not in passed_ids
-        assert "other2" not in passed_ids
-        assert "other3" not in passed_ids
+        # Verify messages.list was called with query containing the sender
+        mock_service.users.return_value.messages.return_value.list.assert_called()
 
     @patch("app.services.gmail.delete.get_gmail_service")
-    def test_delete_single_sender_not_others_same_domain(self, mock_get_service):
-        """Delete one sender -> verify other senders from SAME domain NOT deleted."""
+    def test_delete_single_sender_updates_cache(self, mock_get_service):
+        """Delete one sender -> verify cache updated correctly."""
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)
 
-        # Two senders from same domain
+        # Two senders from same domain in cache
         state.set_delete_scan_results(
             [
                 {
                     "email": "delete@same-domain.com",
                     "domain": "same-domain.com",
                     "count": 2,
-                    "message_ids": ["del1", "del2"],
                     "total_size": 2000,
                     "sender": "Delete",
                     "subjects": [],
@@ -697,7 +687,6 @@ class TestDeleteSafety:
                     "email": "keep@same-domain.com",
                     "domain": "same-domain.com",
                     "count": 3,
-                    "message_ids": ["keep1", "keep2", "keep3"],
                     "total_size": 3000,
                     "sender": "Keep",
                     "subjects": [],
@@ -708,23 +697,16 @@ class TestDeleteSafety:
             ]
         )
 
-        mock_batch_modify = Mock()
-        mock_batch_modify.execute.return_value = {}
-        mock_service.users.return_value.messages.return_value.batchModify.return_value = mock_batch_modify
+        mock_list = Mock()
+        mock_list.execute.return_value = {"messages": [{"id": "del1"}, {"id": "del2"}]}
+        mock_service.users.return_value.messages.return_value.list.return_value = (
+            mock_list
+        )
+
+        mock_service.users.return_value.messages.return_value.batchModify.return_value.execute.return_value = {}
 
         # Delete only one sender
         delete_emails_by_sender("delete@same-domain.com")
-
-        # Verify only delete@same-domain.com's IDs were passed
-        call_args = (
-            mock_service.users.return_value.messages.return_value.batchModify.call_args
-        )
-        passed_ids = call_args[1]["body"]["ids"]
-
-        assert set(passed_ids) == {"del1", "del2"}
-        assert "keep1" not in passed_ids
-        assert "keep2" not in passed_ids
-        assert "keep3" not in passed_ids
 
         # Verify keep@same-domain.com still in cache
         results = get_delete_scan_results()
@@ -732,8 +714,8 @@ class TestDeleteSafety:
         assert results[0]["email"] == "keep@same-domain.com"
 
     @patch("app.services.gmail.delete.get_gmail_service")
-    def test_bulk_delete_only_specified_senders(self, mock_get_service):
-        """Bulk delete 2 of 4 senders -> verify only those 2 senders' message_ids passed."""
+    def test_bulk_delete_multiple_senders(self, mock_get_service):
+        """Bulk delete multiple senders -> verify all queried and deleted."""
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)
 
@@ -743,7 +725,6 @@ class TestDeleteSafety:
                     "email": "delete1@example.com",
                     "domain": "example.com",
                     "count": 1,
-                    "message_ids": ["d1"],
                     "total_size": 1000,
                     "sender": "Delete 1",
                     "subjects": [],
@@ -755,7 +736,6 @@ class TestDeleteSafety:
                     "email": "delete2@example.com",
                     "domain": "example.com",
                     "count": 2,
-                    "message_ids": ["d2a", "d2b"],
                     "total_size": 2000,
                     "sender": "Delete 2",
                     "subjects": [],
@@ -767,21 +747,8 @@ class TestDeleteSafety:
                     "email": "keep1@example.com",
                     "domain": "example.com",
                     "count": 1,
-                    "message_ids": ["k1"],
                     "total_size": 1000,
                     "sender": "Keep 1",
-                    "subjects": [],
-                    "recipients": [],
-                    "first_date": None,
-                    "last_date": None,
-                },
-                {
-                    "email": "keep2@other.com",
-                    "domain": "other.com",
-                    "count": 2,
-                    "message_ids": ["k2a", "k2b"],
-                    "total_size": 2000,
-                    "sender": "Keep 2",
                     "subjects": [],
                     "recipients": [],
                     "first_date": None,
@@ -790,43 +757,40 @@ class TestDeleteSafety:
             ]
         )
 
-        mock_batch_modify = Mock()
-        mock_batch_modify.execute.return_value = {}
-        mock_service.users.return_value.messages.return_value.batchModify.return_value = mock_batch_modify
+        mock_list = Mock()
+        mock_list.execute.side_effect = [
+            {"messages": [{"id": "d1"}]},  # delete1
+            {"messages": [{"id": "d2a"}, {"id": "d2b"}]},  # delete2
+        ]
+        mock_service.users.return_value.messages.return_value.list.return_value = (
+            mock_list
+        )
+
+        mock_service.users.return_value.messages.return_value.batchModify.return_value.execute.return_value = {}
 
         # Delete two specific senders
-        delete_emails_bulk(["delete1@example.com", "delete2@example.com"])
+        result = delete_emails_bulk(["delete1@example.com", "delete2@example.com"])
 
-        # Collect all passed message IDs from all batchModify calls
-        all_passed_ids = set()
-        for call_args in mock_service.users.return_value.messages.return_value.batchModify.call_args_list:
-            all_passed_ids.update(call_args[1]["body"]["ids"])
-
-        assert all_passed_ids == {"d1", "d2a", "d2b"}
-        assert "k1" not in all_passed_ids
-        assert "k2a" not in all_passed_ids
-        assert "k2b" not in all_passed_ids
+        assert result["success"] is True
+        assert result["deleted"] == 3
 
         # Verify kept senders still in cache
         results = get_delete_scan_results()
         emails = [r["email"] for r in results]
         assert "keep1@example.com" in emails
-        assert "keep2@other.com" in emails
 
     @patch("app.services.gmail.delete.get_gmail_service")
-    def test_domain_delete_only_domain_senders(self, mock_get_service):
-        """Delete all senders from one domain -> verify other domain's senders NOT touched."""
+    def test_domain_delete_removes_domain_from_cache(self, mock_get_service):
+        """Delete all senders from domain -> verify domain removed from cache."""
         mock_service = Mock()
         mock_get_service.return_value = (mock_service, None)
 
         state.set_delete_scan_results(
             [
-                # Target domain
                 {
                     "email": "target1@target-domain.com",
                     "domain": "target-domain.com",
                     "count": 2,
-                    "message_ids": ["t1a", "t1b"],
                     "total_size": 2000,
                     "sender": "Target 1",
                     "subjects": [],
@@ -838,7 +802,6 @@ class TestDeleteSafety:
                     "email": "target2@target-domain.com",
                     "domain": "target-domain.com",
                     "count": 1,
-                    "message_ids": ["t2"],
                     "total_size": 1000,
                     "sender": "Target 2",
                     "subjects": [],
@@ -846,26 +809,12 @@ class TestDeleteSafety:
                     "first_date": None,
                     "last_date": None,
                 },
-                # Safe domain
                 {
-                    "email": "safe1@safe-domain.com",
+                    "email": "safe@safe-domain.com",
                     "domain": "safe-domain.com",
                     "count": 3,
-                    "message_ids": ["s1a", "s1b", "s1c"],
                     "total_size": 3000,
-                    "sender": "Safe 1",
-                    "subjects": [],
-                    "recipients": [],
-                    "first_date": None,
-                    "last_date": None,
-                },
-                {
-                    "email": "safe2@safe-domain.com",
-                    "domain": "safe-domain.com",
-                    "count": 2,
-                    "message_ids": ["s2a", "s2b"],
-                    "total_size": 2000,
-                    "sender": "Safe 2",
+                    "sender": "Safe",
                     "subjects": [],
                     "recipients": [],
                     "first_date": None,
@@ -874,29 +823,26 @@ class TestDeleteSafety:
             ]
         )
 
-        mock_batch_modify = Mock()
-        mock_batch_modify.execute.return_value = {}
-        mock_service.users.return_value.messages.return_value.batchModify.return_value = mock_batch_modify
+        mock_list = Mock()
+        mock_list.execute.side_effect = [
+            {"messages": [{"id": "t1a"}, {"id": "t1b"}]},  # target1
+            {"messages": [{"id": "t2"}]},  # target2
+        ]
+        mock_service.users.return_value.messages.return_value.list.return_value = (
+            mock_list
+        )
+
+        mock_service.users.return_value.messages.return_value.batchModify.return_value.execute.return_value = {}
 
         # Delete entire target domain
-        delete_emails_bulk(["target1@target-domain.com", "target2@target-domain.com"])
+        result = delete_emails_bulk(
+            ["target1@target-domain.com", "target2@target-domain.com"]
+        )
 
-        # Collect all passed message IDs
-        all_passed_ids = set()
-        for call_args in mock_service.users.return_value.messages.return_value.batchModify.call_args_list:
-            all_passed_ids.update(call_args[1]["body"]["ids"])
-
-        # Only target domain IDs should be passed
-        assert all_passed_ids == {"t1a", "t1b", "t2"}
-        assert "s1a" not in all_passed_ids
-        assert "s1b" not in all_passed_ids
-        assert "s1c" not in all_passed_ids
-        assert "s2a" not in all_passed_ids
-        assert "s2b" not in all_passed_ids
+        assert result["success"] is True
+        assert result["deleted"] == 3
 
         # Safe domain senders should remain in cache
         results = get_delete_scan_results()
-        assert len(results) == 2
-        domains = {r["domain"] for r in results}
-        assert "safe-domain.com" in domains
-        assert "target-domain.com" not in domains
+        assert len(results) == 1
+        assert results[0]["domain"] == "safe-domain.com"

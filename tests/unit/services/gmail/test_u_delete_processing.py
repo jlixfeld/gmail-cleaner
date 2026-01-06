@@ -296,30 +296,6 @@ class TestSenderAggregation:
         assert len(results[0]["subjects"]) == 3
 
     @patch("app.services.gmail.delete.get_gmail_service")
-    def test_message_id_collection(self, mock_get_service):
-        """All message IDs should be collected for sender."""
-        messages = [
-            {
-                "id": f"msg{i}",
-                "payload": {
-                    "headers": [
-                        {"name": "From", "value": "sender@example.com"},
-                        {"name": "Subject", "value": f"Subject {i}"},
-                    ]
-                },
-                "sizeEstimate": 1000,
-            }
-            for i in range(3)
-        ]
-
-        self._setup_mock_service(mock_get_service, messages)
-        scan_senders_for_delete(limit=10)
-        results = get_delete_scan_results()
-
-        assert len(results[0]["message_ids"]) == 3
-        assert set(results[0]["message_ids"]) == {"msg0", "msg1", "msg2"}
-
-    @patch("app.services.gmail.delete.get_gmail_service")
     def test_date_tracking(self, mock_get_service):
         """First and last dates should be tracked."""
         messages = [
