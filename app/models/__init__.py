@@ -15,6 +15,7 @@ from .schemas import (
     MarkImportantRequest,
     UnreadScanRequest,
     UnreadActionRequest,
+    BuildKnownSendersRequest,
     StatusResponse,
     AuthStatusResponse,
     ScanStatusResponse,

@@ -220,6 +220,25 @@ def get_subject(headers: list) -> str:
     return "(No Subject)"
 
 
+def get_recipients_from_headers(headers: list) -> set[str]:
+    """Extract recipient email addresses from To, Cc, Bcc headers.
+
+    Args:
+        headers: List of email header dicts with 'name' and 'value' keys
+
+    Returns:
+        Set of lowercase email addresses from To/Cc/Bcc fields
+    """
+    recipients: set[str] = set()
+    for header in headers:
+        if header["name"].lower() in ("to", "cc", "bcc"):
+            # Find all email addresses in the header value
+            # Handles formats like: "Name <email@domain.com>, other@domain.com"
+            emails = re.findall(r"[\w\.\-\+]+@[\w\.\-]+\.\w+", header["value"])
+            recipients.update(e.lower() for e in emails)
+    return recipients
+
+
 def get_list_id(headers: list) -> Optional[str]:
     """Extract List-Id from email headers.
 

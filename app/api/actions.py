@@ -34,6 +34,7 @@ from app.models import (
     MarkImportantRequest,
     UnreadScanRequest,
     UnreadActionRequest,
+    BuildKnownSendersRequest,
 )
 from app.services import (
     scan_emails,
@@ -56,6 +57,8 @@ from app.services import (
     mark_read_and_archive_by_senders_background,
     archive_unread_by_senders_background,
     delete_unread_by_senders_background,
+    build_known_senders_cache,
+    scan_unknown_senders_for_delete,
 )
 
 router = APIRouter(prefix="/api", tags=["Actions"])
@@ -373,4 +376,32 @@ async def api_unread_delete(
             detail="At least one sender is required",
         )
     background_tasks.add_task(delete_unread_by_senders_background, body.senders)
+    return {"status": "started"}
+
+
+# ----- Unknown Sender Endpoints -----
+
+
+@router.post("/build-known-senders")
+@limiter.limit(HEAVY_OPERATION_RATE_LIMIT)
+async def api_build_known_senders(
+    request: Request,
+    body: BuildKnownSendersRequest,
+    background_tasks: BackgroundTasks,
+):
+    """Build cache of known senders by scanning Sent folder."""
+    background_tasks.add_task(build_known_senders_cache, body.limit)
+    return {"status": "started"}
+
+
+@router.post("/delete-scan-unknown")
+@limiter.limit(HEAVY_OPERATION_RATE_LIMIT)
+async def api_delete_scan_unknown(
+    request: Request,
+    body: DeleteScanRequest,
+    background_tasks: BackgroundTasks,
+):
+    """Scan senders for bulk delete, excluding known senders."""
+    filters_dict = body.filters.model_dump(exclude_none=True) if body.filters else None
+    background_tasks.add_task(scan_unknown_senders_for_delete, body.limit, filters_dict)
     return {"status": "started"}

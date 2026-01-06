@@ -46,6 +46,9 @@ from app.services.gmail.delete import (
     delete_emails_bulk,
     delete_emails_bulk_background,
     get_delete_bulk_status,
+    build_known_senders_cache,
+    scan_unknown_senders_for_delete,
+    get_known_senders_status,
 )
 from app.services.gmail.download import (
     download_emails_background,
@@ -93,13 +96,16 @@ __all__ = [
     # Auth (for backward compatibility)
     "get_gmail_service",
     # Delete
+    "build_known_senders_cache",
     "delete_emails_bulk",
     "delete_emails_bulk_background",
     "delete_emails_by_sender",
     "get_delete_bulk_status",
     "get_delete_scan_results",
     "get_delete_scan_status",
+    "get_known_senders_status",
     "scan_senders_for_delete",
+    "scan_unknown_senders_for_delete",
     # Download
     "download_emails_background",
     "get_download_csv",

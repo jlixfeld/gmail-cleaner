@@ -43,6 +43,7 @@ class AppState:
         self._important_lock = threading.Lock()
         self._unread_scan_lock = threading.Lock()
         self._unread_action_lock = threading.Lock()
+        self._known_senders_lock = threading.Lock()
 
         # === User state ===
         self._current_user: dict = {"email": None, "logged_in": False}
@@ -152,6 +153,17 @@ class AppState:
             "affected_count": 0,
             "total_senders": 0,
             "current_sender": 0,
+        }
+
+        # === Known senders state (for unknown sender detection) ===
+        self._known_senders: set[str] = set()
+        self._known_senders_status: dict = {
+            "progress": 0,
+            "message": "Ready",
+            "done": False,
+            "error": None,
+            "sender_count": 0,
+            "scanned_emails": 0,
         }
 
     # =========================================================================
@@ -532,6 +544,48 @@ class AppState:
                 "total_senders": 0,
                 "current_sender": 0,
             }
+
+    # =========================================================================
+    # KNOWN SENDERS STATE
+    # =========================================================================
+
+    def get_known_senders(self) -> set[str]:
+        """Get a copy of the known senders set."""
+        with self._known_senders_lock:
+            return self._known_senders.copy()
+
+    def set_known_senders(self, senders: set[str]) -> None:
+        """Replace the known senders set entirely."""
+        with self._known_senders_lock:
+            self._known_senders = senders.copy()
+
+    def get_known_senders_status(self) -> dict:
+        """Get a copy of the known senders status."""
+        with self._known_senders_lock:
+            return self._known_senders_status.copy()
+
+    def update_known_senders_status(self, **kwargs: Any) -> None:
+        """Update known senders status with the provided key-value pairs."""
+        with self._known_senders_lock:
+            self._known_senders_status.update(kwargs)
+
+    def reset_known_senders(self) -> None:
+        """Reset known senders state (clears cache)."""
+        with self._known_senders_lock:
+            self._known_senders = set()
+            self._known_senders_status = {
+                "progress": 0,
+                "message": "Ready",
+                "done": False,
+                "error": None,
+                "sender_count": 0,
+                "scanned_emails": 0,
+            }
+
+    def is_known_senders_cached(self) -> bool:
+        """Check if known senders cache has been built."""
+        with self._known_senders_lock:
+            return len(self._known_senders) > 0
 
     # =========================================================================
     # BACKWARD COMPATIBILITY PROPERTIES

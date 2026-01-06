@@ -34,6 +34,7 @@ from app.services import (
     get_unread_scan_status,
     get_unread_scan_results,
     get_unread_action_status,
+    get_known_senders_status,
 )
 
 router = APIRouter(prefix="/api", tags=["Status"])
@@ -310,4 +311,21 @@ async def api_unread_action_status(request: Request):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get unread action status",
+        ) from e
+
+
+# ----- Unknown Sender Endpoints -----
+
+
+@router.get("/known-senders-status")
+@limiter.limit(STATUS_RATE_LIMIT)
+async def api_known_senders_status(request: Request):
+    """Get known senders cache build status."""
+    try:
+        return get_known_senders_status()
+    except Exception as e:
+        logger.exception("Error getting known senders status")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get known senders status",
         ) from e

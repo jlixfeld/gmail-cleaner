@@ -218,6 +218,14 @@ class UnreadActionRequest(BaseModel):
     senders: list[str] = Field(default=[], description="List of sender addresses")
 
 
+class BuildKnownSendersRequest(BaseModel):
+    """Request to build known senders cache from Sent folder."""
+
+    limit: int = Field(
+        default=5000, ge=0, le=100000, description="Max sent emails to scan. 0 = scan all."
+    )
+
+
 # ----- Response Models -----
 
 

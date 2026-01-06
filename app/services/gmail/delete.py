@@ -13,6 +13,7 @@ from app.core import state
 from app.services.auth import get_gmail_service
 from app.services.gmail.helpers import (
     build_gmail_query,
+    get_recipients_from_headers,
     get_sender_info,
     get_subject,
 )
@@ -500,3 +501,308 @@ def delete_emails_bulk_background(senders: list[str]) -> None:
 def get_delete_bulk_status() -> dict:
     """Get delete bulk operation status."""
     return state.delete_bulk_status.copy()
+
+
+# =============================================================================
+# UNKNOWN SENDERS DETECTION
+# =============================================================================
+
+
+def build_known_senders_cache(limit: int = 5000):
+    """Build cache of known senders by scanning Sent folder.
+
+    Scans sent emails to extract all recipients (To, Cc, Bcc) and builds a set
+    of known contacts. This cache is used to filter unknown senders in scans.
+
+    Args:
+        limit: Maximum sent emails to scan. 0 = scan all (no limit).
+    """
+    if limit < 0:
+        state.update_known_senders_status(error="Limit cannot be negative", done=True)
+        return
+
+    scan_all = limit == 0
+    state.reset_known_senders()
+    state.update_known_senders_status(message="Connecting to Gmail...")
+
+    service, error = get_gmail_service()
+    if error:
+        state.update_known_senders_status(error=error, done=True)
+        return
+
+    try:
+        state.update_known_senders_status(message="Fetching sent emails...")
+
+        # Query only sent emails
+        max_results = 500 if scan_all else min(limit, 500)
+        results = (
+            service.users()
+            .messages()
+            .list(userId="me", maxResults=max_results, q="in:sent")
+            .execute()
+        )
+
+        all_messages = results.get("messages", [])
+
+        while "nextPageToken" in results and (scan_all or len(all_messages) < limit):
+            max_results = 500 if scan_all else min(limit - len(all_messages), 500)
+            results = (
+                service.users()
+                .messages()
+                .list(
+                    userId="me",
+                    maxResults=max_results,
+                    pageToken=results["nextPageToken"],
+                    q="in:sent",
+                )
+                .execute()
+            )
+            all_messages.extend(results.get("messages", []))
+
+        if not scan_all:
+            all_messages = all_messages[:limit]
+
+        total = len(all_messages)
+        if total == 0:
+            state.update_known_senders_status(
+                message="No sent emails found", done=True, sender_count=0
+            )
+            return
+
+        state.update_known_senders_status(message=f"Scanning {total} sent emails...")
+
+        # Extract recipients from all sent emails
+        known_senders: set[str] = set()
+        processed = 0
+        batch_size = 100
+
+        def process_message(request_id, response, exception) -> None:
+            nonlocal processed
+            processed += 1
+
+            if exception:
+                return
+
+            headers = response.get("payload", {}).get("headers", [])
+            recipients = get_recipients_from_headers(headers)
+            known_senders.update(recipients)
+
+        # Execute batch requests
+        for i in range(0, len(all_messages), batch_size):
+            batch_ids = all_messages[i : i + batch_size]
+            batch = service.new_batch_http_request(callback=process_message)
+
+            for msg_data in batch_ids:
+                batch.add(
+                    service.users()
+                    .messages()
+                    .get(
+                        userId="me",
+                        id=msg_data["id"],
+                        format="metadata",
+                        metadataHeaders=["To", "Cc", "Bcc"],
+                    )
+                )
+
+            batch.execute()
+
+            progress = int((i + len(batch_ids)) / total * 100)
+            state.update_known_senders_status(
+                progress=progress,
+                message=f"Processed {processed}/{total} sent emails",
+                scanned_emails=processed,
+                sender_count=len(known_senders),
+            )
+
+        # Store the known senders
+        state.set_known_senders(known_senders)
+        state.update_known_senders_status(
+            progress=100,
+            done=True,
+            message=f"Found {len(known_senders)} known contacts",
+            sender_count=len(known_senders),
+            scanned_emails=total,
+        )
+
+    except Exception as e:
+        logger.exception("Error building known senders cache")
+        state.update_known_senders_status(error=str(e), done=True)
+
+
+def scan_unknown_senders_for_delete(limit: int = 1000, filters: Optional[dict] = None):
+    """Scan emails and group by sender, excluding known senders.
+
+    Like scan_senders_for_delete but filters out senders from the known senders cache.
+    The cache must be built first using build_known_senders_cache().
+
+    Args:
+        limit: Maximum emails to scan. 0 = scan all (no limit).
+        filters: Optional Gmail filter options.
+    """
+    if limit < 0:
+        state.reset_delete_scan()
+        state.update_delete_scan_status(error="Limit cannot be negative", done=True)
+        return
+
+    # Get known senders cache
+    known_senders = state.get_known_senders()
+    if not known_senders:
+        state.reset_delete_scan()
+        state.update_delete_scan_status(
+            error="Known senders cache not built. Build it first.", done=True
+        )
+        return
+
+    scan_all = limit == 0
+    state.reset_delete_scan()
+    state.update_delete_scan_status(message="Connecting to Gmail...")
+
+    service, error = get_gmail_service()
+    if error:
+        state.update_delete_scan_status(error=error, done=True)
+        return
+
+    try:
+        state.update_delete_scan_status(message="Fetching emails...")
+
+        query = build_gmail_query(filters)
+
+        max_results = 500 if scan_all else min(limit, 500)
+        results = (
+            service.users()
+            .messages()
+            .list(userId="me", maxResults=max_results, q=query or None)
+            .execute()
+        )
+
+        messages = results.get("messages", [])
+
+        while "nextPageToken" in results and (scan_all or len(messages) < limit):
+            max_results = 500 if scan_all else min(limit - len(messages), 500)
+            results = (
+                service.users()
+                .messages()
+                .list(
+                    userId="me",
+                    maxResults=max_results,
+                    pageToken=results["nextPageToken"],
+                    q=query or None,
+                )
+                .execute()
+            )
+            messages.extend(results.get("messages", []))
+
+        if not scan_all:
+            messages = messages[:limit]
+        total = len(messages)
+
+        if total == 0:
+            state.update_delete_scan_status(message="No emails found", done=True)
+            return
+
+        state.update_delete_scan_status(
+            message=f"Scanning {total} emails (filtering {len(known_senders)} known)..."
+        )
+
+        # Group by sender using Gmail Batch API
+        sender_counts: dict[str, dict] = defaultdict(
+            lambda: {
+                "count": 0,
+                "sender": "",
+                "email": "",
+                "subjects": [],
+                "first_date": None,
+                "last_date": None,
+                "message_ids": [],
+                "total_size": 0,
+            }
+        )
+        processed = 0
+        skipped = 0
+        batch_size = 100
+
+        def process_message(request_id, response, exception) -> None:
+            nonlocal processed, skipped
+            processed += 1
+
+            if exception:
+                return
+
+            headers = response.get("payload", {}).get("headers", [])
+            sender_name, sender_email = get_sender_info(headers)
+
+            # Skip known senders (case-insensitive match)
+            if sender_email.lower() in known_senders:
+                skipped += 1
+                return
+
+            subject = get_subject(headers)
+            msg_id = response.get("id", "")
+            size_estimate = response.get("sizeEstimate", 0)
+
+            email_date = None
+            for header in headers:
+                if header["name"].lower() == "date":
+                    email_date = header["value"]
+                    break
+
+            if sender_email:
+                sender_counts[sender_email]["count"] += 1
+                sender_counts[sender_email]["sender"] = sender_name
+                sender_counts[sender_email]["email"] = sender_email
+                sender_counts[sender_email]["message_ids"].append(msg_id)
+                sender_counts[sender_email]["total_size"] += size_estimate
+                if len(sender_counts[sender_email]["subjects"]) < 3:
+                    sender_counts[sender_email]["subjects"].append(subject)
+
+                if email_date:
+                    if sender_counts[sender_email]["first_date"] is None:
+                        sender_counts[sender_email]["first_date"] = email_date
+                    sender_counts[sender_email]["last_date"] = email_date
+
+        # Execute batch requests
+        for i in range(0, len(messages), batch_size):
+            batch_ids = messages[i : i + batch_size]
+            batch = service.new_batch_http_request(callback=process_message)
+
+            for msg_data in batch_ids:
+                batch.add(
+                    service.users()
+                    .messages()
+                    .get(
+                        userId="me",
+                        id=msg_data["id"],
+                        format="metadata",
+                        metadataHeaders=["From", "Subject", "Date"],
+                    )
+                )
+
+            batch.execute()
+
+            progress = int((i + len(batch_ids)) / total * 100)
+            state.update_delete_scan_status(
+                progress=progress,
+                message=f"Scanned {processed}/{total} emails ({skipped} known skipped)",
+            )
+
+        # Sort by count
+        sorted_senders = sorted(
+            [{"email": k, **v} for k, v in sender_counts.items()],
+            key=lambda x: x["count"],
+            reverse=True,
+        )
+
+        state.set_delete_scan_results(sorted_senders)
+        state.update_delete_scan_status(
+            message=f"Found {len(sorted_senders)} unknown senders ({skipped} known skipped)",
+            done=True,
+        )
+
+    except Exception as e:
+        logger.exception("Error scanning unknown senders")
+        state.update_delete_scan_status(error=str(e), done=True)
+
+
+def get_known_senders_status() -> dict:
+    """Get known senders cache build status."""
+    return state.get_known_senders_status()
