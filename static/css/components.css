@@ -534,6 +534,33 @@
     transform: rotate(0deg);
 }
 
+/* Copy Query Button */
+.copy-query-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-left: 4px;
+}
+
+.copy-query-btn:hover {
+    background: var(--hover-bg);
+    border-color: var(--border-color);
+    color: var(--text-secondary);
+}
+
+.copy-query-btn:active {
+    background: var(--border-color);
+}
+
 /* Badge */
 .badge {
     margin-left: auto;

@@ -5,6 +5,22 @@
 window.GmailCleaner = window.GmailCleaner || {};
 
 GmailCleaner.Scanner = {
+    async copyGmailQuery(query) {
+        try {
+            await navigator.clipboard.writeText(query);
+            GmailCleaner.UI.showSuccessToast(`Copied: ${query}`);
+        } catch (err) {
+            // Fallback for older browsers
+            const textarea = document.createElement('textarea');
+            textarea.value = query;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            GmailCleaner.UI.showSuccessToast(`Copied: ${query}`);
+        }
+    },
+
     formatDateRange(firstDate, lastDate) {
         /**
          * Parse RFC 2822 date string and format as MM/DD/YYYY
@@ -215,6 +231,9 @@ GmailCleaner.Scanner = {
                     : (r.email || r.domain || '');
             }
 
+            // Build Gmail search query for verification
+            const gmailQuery = r.list_id ? `list:${r.list_id}` : `from:${r.email || r.domain}`;
+
             item.innerHTML = `
                 <label class="checkbox-wrapper result-checkbox">
                     <input type="checkbox" class="result-cb" data-index="${originalIndex}" data-type="${r.type || 'manual'}" data-email="${GmailCleaner.UI.escapeHtml(r.email || '')}">
@@ -227,6 +246,9 @@ GmailCleaner.Scanner = {
                 <div class="result-meta">
                     ${r.first_date && r.last_date ? `<div class="result-date-range">${GmailCleaner.Scanner.formatDateRange(r.first_date, r.last_date)}</div>` : ''}
                     <span class="result-count" id="count-${originalIndex}">${r.count} emails</span>
+                    <button class="copy-query-btn" onclick="GmailCleaner.Scanner.copyGmailQuery('${GmailCleaner.UI.escapeHtml(gmailQuery)}')" title="Copy Gmail search query: ${GmailCleaner.UI.escapeHtml(gmailQuery)}">
+                        <svg viewBox="0 0 24 24" width="14" height="14"><path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                    </button>
                 </div>
                 <div class="result-actions">
                     ${deleteButton}
