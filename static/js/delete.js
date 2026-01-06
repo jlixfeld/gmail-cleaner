@@ -440,14 +440,21 @@ GmailCleaner.Delete = {
             }
         });
 
-        // Convert sets to arrays and sort by total emails
+        // Convert sets to arrays
         this.domainGroups = Array.from(domainMap.values())
             .map(group => ({
                 ...group,
                 uniqueSenders: Array.from(group.uniqueSenders),
                 uniqueRecipients: Array.from(group.uniqueRecipients),
-            }))
-            .sort((a, b) => b.totalEmails - a.totalEmails);
+            }));
+
+        // Sort by date (respecting the date toggle) - same as flat view
+        const sortOrder = GmailCleaner.sortOrder.delete;
+        this.domainGroups.sort((a, b) => {
+            const dateA = a.lastDate ? new Date(a.lastDate) : new Date(0);
+            const dateB = b.lastDate ? new Date(b.lastDate) : new Date(0);
+            return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+        });
     },
 
     displayDomainResults() {
@@ -515,8 +522,13 @@ GmailCleaner.Delete = {
         container.className = 'domain-senders-container';
         container.dataset.domain = group.domain;
 
-        // Sort senders by count
-        const sortedSenders = [...group.senders].sort((a, b) => b.count - a.count);
+        // Sort senders by date (respecting the date toggle)
+        const sortOrder = GmailCleaner.sortOrder.delete;
+        const sortedSenders = [...group.senders].sort((a, b) => {
+            const dateA = a.last_date ? new Date(a.last_date) : new Date(0);
+            const dateB = b.last_date ? new Date(b.last_date) : new Date(0);
+            return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+        });
 
         sortedSenders.forEach(sender => {
             const originalIndex = GmailCleaner.deleteResults.indexOf(sender);
@@ -564,19 +576,22 @@ GmailCleaner.Delete = {
         const group = this.domainGroups.find(g => g.domain === domain);
         if (!group) return;
 
-        // Note: We query Gmail directly for ALL emails, so actual count may be higher than cached
-        if (!confirm(`Delete ALL emails from @${domain}?\n\nThis queries Gmail directly and will delete ALL matching emails, including any that arrived after scanning.\n\nThis will move them to Trash.`)) {
+        // Collect sender emails from the domain group (only deletes from scanned senders)
+        const senderEmails = group.senders.map(s => s.email);
+        const senderCount = senderEmails.length;
+
+        if (!confirm(`Delete ${group.totalEmails} emails from ${senderCount} sender${senderCount !== 1 ? 's' : ''} at @${domain}?\n\nThis will move them to Trash.`)) {
             return;
         }
 
         // Show bulk delete overlay
-        this.showDeleteOverlay(1, group.totalEmails);
+        this.showDeleteOverlay(senderCount, group.totalEmails);
 
         try {
-            await fetch('/api/delete-domain', {
+            await fetch('/api/delete-emails-bulk', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ domain: domain })
+                body: JSON.stringify({ senders: senderEmails })
             });
 
             // Poll for progress using the same bulk delete status
