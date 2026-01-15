@@ -870,16 +870,23 @@ GmailCleaner.Delete = {
         const group = this.domainGroups.find(g => g.domain === domain);
         if (!group) return;
 
-        // Collect sender emails from the domain group (only deletes from scanned senders)
-        const senderEmails = group.senders.map(s => s.email);
+        // Filter out protected senders (valid senders and known recipients)
+        const deletableSenders = group.senders.filter(s => !this.isProtectedSender(s.email));
+        const senderEmails = deletableSenders.map(s => s.email);
         const senderCount = senderEmails.length;
+        const totalEmails = deletableSenders.reduce((sum, s) => sum + s.count, 0);
 
-        if (!confirm(`Delete ${group.totalEmails} emails from ${senderCount} sender${senderCount !== 1 ? 's' : ''} at @${domain}?\n\nThis will move them to Trash.`)) {
+        if (senderCount === 0) {
+            alert('All senders in this domain are protected (valid senders or known recipients).');
+            return;
+        }
+
+        if (!confirm(`Delete ${totalEmails} emails from ${senderCount} sender${senderCount !== 1 ? 's' : ''} at @${domain}?\n\nThis will move them to Trash.`)) {
             return;
         }
 
         // Show bulk delete overlay
-        this.showDeleteOverlay(senderCount, group.totalEmails);
+        this.showDeleteOverlay(senderCount, totalEmails);
 
         try {
             await fetch('/api/delete-emails-bulk', {
@@ -1009,6 +1016,12 @@ GmailCleaner.Delete = {
         const r = GmailCleaner.deleteResults[index];
         const btn = document.getElementById('delete-' + index);
 
+        // Safety check: don't delete protected senders
+        if (this.isProtectedSender(r.email)) {
+            alert('This sender is protected (valid sender or known recipient) and cannot be deleted.');
+            return;
+        }
+
         if (!confirm(`Delete ALL ${r.count} emails from ${r.email}?\n\nThis will move them to Trash.`)) {
             return;
         }
@@ -1056,7 +1069,8 @@ GmailCleaner.Delete = {
 
     async deleteSelected() {
         // Use selectedSenders Set for reliable selection state
-        const senderEmails = Array.from(this.selectedSenders);
+        // Double-check by filtering out any protected senders (defense in depth)
+        const senderEmails = Array.from(this.selectedSenders).filter(email => !this.isProtectedSender(email));
 
         if (senderEmails.length === 0) {
             alert('Please select at least one sender to delete emails from.');
