@@ -5,9 +5,10 @@
 window.GmailCleaner = window.GmailCleaner || {};
 
 GmailCleaner.Delete = {
-    // Unknown senders state
-    knownSendersCached: false,
-    buildingKnownSenders: false,
+    // Valid senders and known recipients state (loaded from DB)
+    validSenders: new Set(),
+    myRecipients: new Set(),
+    recipientsScanInProgress: false,
 
     // Domain grouping state
     groupByDomain: false,
@@ -18,11 +19,10 @@ GmailCleaner.Delete = {
     selectedDomains: new Set(),
     selectedSenders: new Set(),
 
-    formatDateRange(firstDate, lastDate) {
+    formatMostRecentDate(firstDate, lastDate) {
         /**
          * Parse RFC 2822 date string and format as MM/DD/YYYY
-         * Example: "Wed, 15 Nov 2025 10:30:00 +0000" -> "11/15/2025"
-         * Returns date range from oldest to newest
+         * Returns only the most recent date
          */
         const formatDate = (dateStr) => {
             try {
@@ -37,21 +37,226 @@ GmailCleaner.Delete = {
             }
         };
 
-        const first = formatDate(firstDate);
-        const last = formatDate(lastDate);
+        // Return the most recent date (last_date is usually more recent)
+        const firstDateObj = firstDate ? new Date(firstDate) : null;
+        const lastDateObj = lastDate ? new Date(lastDate) : null;
 
-        if (!first || !last) return '';
-        if (first === last) return first;
-
-        // Compare dates to determine order (oldest to newest)
-        const firstDateObj = new Date(firstDate);
-        const lastDateObj = new Date(lastDate);
-
-        if (firstDateObj <= lastDateObj) {
-            return `${first} to ${last}`;
-        } else {
-            return `${last} to ${first}`;
+        if (firstDateObj && lastDateObj) {
+            return formatDate(firstDateObj > lastDateObj ? firstDate : lastDate) || '';
         }
+        return formatDate(lastDate) || formatDate(firstDate) || '';
+    },
+
+    // Auto-scan recipients when Delete tab is selected
+    async autoScanRecipients() {
+        if (this.recipientsScanInProgress) return;
+
+        const authResponse = await fetch('/api/auth-status');
+        const authStatus = await authResponse.json();
+        if (!authStatus.logged_in) return;
+
+        // Show the spinner overlay
+        this.recipientsScanInProgress = true;
+        const overlay = document.getElementById('recipientsScanOverlay');
+        if (overlay) overlay.classList.remove('hidden');
+
+        try {
+            // Load valid senders first (from database)
+            await this.loadValidSenders();
+
+            // Start the recipients scan
+            await fetch('/api/scan-recipients', { method: 'POST' });
+
+            // Poll for progress
+            await this.pollRecipientsScanProgress();
+        } catch (error) {
+            console.error('Error scanning recipients:', error);
+            this.hideRecipientsScanOverlay();
+        }
+    },
+
+    async pollRecipientsScanProgress() {
+        try {
+            const response = await fetch('/api/recipients-scan-status');
+            const status = await response.json();
+
+            // Update message if provided
+            const messageEl = document.getElementById('recipientsScanMessage');
+            if (messageEl && status.message) {
+                messageEl.textContent = status.message;
+            }
+
+            if (status.done) {
+                // Load the recipients into local set
+                await this.loadMyRecipients();
+                this.hideRecipientsScanOverlay();
+
+                // Update the UI counts
+                this.updateReferenceCounts();
+            } else {
+                setTimeout(() => this.pollRecipientsScanProgress(), 300);
+            }
+        } catch (error) {
+            setTimeout(() => this.pollRecipientsScanProgress(), 500);
+        }
+    },
+
+    hideRecipientsScanOverlay() {
+        this.recipientsScanInProgress = false;
+        const overlay = document.getElementById('recipientsScanOverlay');
+        if (overlay) overlay.classList.add('hidden');
+    },
+
+    async loadValidSenders() {
+        try {
+            const response = await fetch('/api/valid-senders');
+            const data = await response.json();
+            this.validSenders = new Set(data.senders.map(s => s.sender_email.toLowerCase()));
+            this.updateReferenceCounts();
+        } catch (error) {
+            console.error('Error loading valid senders:', error);
+        }
+    },
+
+    async loadMyRecipients() {
+        try {
+            const response = await fetch('/api/my-recipients');
+            const data = await response.json();
+            this.myRecipients = new Set(data.recipients.map(r => r.recipient_email.toLowerCase()));
+            this.updateReferenceCounts();
+        } catch (error) {
+            console.error('Error loading my recipients:', error);
+        }
+    },
+
+    updateReferenceCounts() {
+        const validCount = document.getElementById('validSendersCount');
+        const recipientsCount = document.getElementById('knownRecipientsCount');
+        if (validCount) validCount.textContent = this.validSenders.size;
+        if (recipientsCount) recipientsCount.textContent = this.myRecipients.size;
+    },
+
+    // Valid sender toggle
+    async toggleValidSender(email) {
+        const emailLower = email.toLowerCase();
+        const isCurrentlyValid = this.validSenders.has(emailLower);
+
+        try {
+            if (isCurrentlyValid) {
+                // Remove from valid senders
+                await fetch('/api/valid-senders', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sender_email: email })
+                });
+                this.validSenders.delete(emailLower);
+            } else {
+                // Add to valid senders
+                await fetch('/api/valid-senders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ sender_email: email })
+                });
+                this.validSenders.add(emailLower);
+            }
+
+            // Update counts and re-render
+            this.updateReferenceCounts();
+            this.displayResults();
+            this.restoreSelectionState();
+        } catch (error) {
+            console.error('Error toggling valid sender:', error);
+            GmailCleaner.UI.showErrorToast('Failed to update valid sender status');
+        }
+    },
+
+    // Check if sender is protected (valid sender or known recipient)
+    isProtectedSender(email) {
+        const emailLower = email.toLowerCase();
+        return this.validSenders.has(emailLower) || this.myRecipients.has(emailLower);
+    },
+
+    // Modal handlers
+    async showValidSendersList() {
+        const modal = document.getElementById('validSendersModal');
+        const list = document.getElementById('validSendersList');
+        const empty = document.getElementById('validSendersEmpty');
+
+        // Refresh from server
+        await this.loadValidSenders();
+
+        list.innerHTML = '';
+
+        if (this.validSenders.size === 0) {
+            empty.classList.remove('hidden');
+            list.classList.add('hidden');
+        } else {
+            empty.classList.add('hidden');
+            list.classList.remove('hidden');
+
+            Array.from(this.validSenders).sort().forEach(email => {
+                const item = document.createElement('div');
+                item.className = 'reference-list-item';
+                const jsEscapedEmail = email.replace(/'/g, "\\'").replace(/"/g, '\\"');
+                item.innerHTML = `
+                    <span class="reference-email">${GmailCleaner.UI.escapeHtml(email)}</span>
+                    <button class="remove-btn" onclick="GmailCleaner.Delete.removeValidSenderFromList('${jsEscapedEmail}')" title="Remove from valid senders">
+                        <svg viewBox="0 0 24 24" width="18" height="18">
+                            <path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
+                        </svg>
+                    </button>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        modal.classList.remove('hidden');
+    },
+
+    closeValidSendersModal() {
+        const modal = document.getElementById('validSendersModal');
+        modal.classList.add('hidden');
+    },
+
+    async removeValidSenderFromList(email) {
+        await this.toggleValidSender(email);
+        // Refresh the modal list
+        await this.showValidSendersList();
+    },
+
+    async showKnownRecipientsList() {
+        const modal = document.getElementById('knownRecipientsModal');
+        const list = document.getElementById('knownRecipientsList');
+        const empty = document.getElementById('knownRecipientsEmpty');
+
+        // Refresh from server
+        await this.loadMyRecipients();
+
+        list.innerHTML = '';
+
+        if (this.myRecipients.size === 0) {
+            empty.classList.remove('hidden');
+            list.classList.add('hidden');
+        } else {
+            empty.classList.add('hidden');
+            list.classList.remove('hidden');
+
+            Array.from(this.myRecipients).sort().forEach(email => {
+                const item = document.createElement('div');
+                item.className = 'reference-list-item';
+                item.innerHTML = `
+                    <span class="reference-email">${GmailCleaner.UI.escapeHtml(email)}</span>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        modal.classList.remove('hidden');
+    },
+
+    closeKnownRecipientsModal() {
+        const modal = document.getElementById('knownRecipientsModal');
+        modal.classList.add('hidden');
     },
 
     // Selection state management
@@ -221,16 +426,6 @@ GmailCleaner.Delete = {
             return;
         }
 
-        // Check if filter toggle is enabled
-        const filterToggle = document.getElementById('filterKnownSendersToggle');
-        const filterEnabled = filterToggle && filterToggle.checked;
-
-        // If filter is enabled but no cache exists, show error
-        if (filterEnabled && !this.knownSendersCached) {
-            alert('Please run "Scan Known Senders" first to build the known senders cache before filtering.');
-            return;
-        }
-
         GmailCleaner.deleteScanning = true;
 
         const scanBtn = document.getElementById('deleteScanBtn');
@@ -245,18 +440,15 @@ GmailCleaner.Delete = {
         `;
         progressCard.classList.remove('hidden');
 
-        const limit = getLimitValue('deleteScanLimit');
         const filters = GmailCleaner.Filters.get();
 
-        // Choose endpoint based on filter toggle state
-        const endpoint = filterEnabled ? '/api/delete-scan-unknown' : '/api/delete-scan';
-
         try {
-            const response = await fetch(endpoint, {
+            // Always use the main scan endpoint (it now scans all and annotates results)
+            const response = await fetch('/api/delete-scan', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    limit: limit,
+                    limit: 0,  // Scan all
                     filters: filters
                 })
             });
@@ -357,29 +549,64 @@ GmailCleaner.Delete = {
             // Find original index for actions
             const originalIndex = GmailCleaner.deleteResults.indexOf(r);
             const item = document.createElement('div');
-            item.className = 'result-item';
 
-            const dateRange = this.formatDateRange(r.first_date, r.last_date);
-            const dateRangeDisplay = dateRange ? `<div class="result-date-range">${dateRange}</div>` : '';
+            const emailLower = r.email.toLowerCase();
+            const isValidSender = this.validSenders.has(emailLower);
+            const isKnownRecipient = this.myRecipients.has(emailLower);
+            const isProtected = isValidSender || isKnownRecipient;
+
+            item.className = 'result-item' + (isProtected ? ' protected-row' : '');
+
+            const recentDate = this.formatMostRecentDate(r.first_date, r.last_date);
+            const dateDisplay = recentDate ? `<div class="result-date-range">${recentDate}</div>` : '';
             const jsEscapedEmail = r.email.replace(/'/g, "\\'").replace(/"/g, '\\"');
 
-            item.innerHTML = `
+            // Valid sender toggle button
+            const validBtnClass = isValidSender ? 'valid' : 'invalid';
+            const validBtnTitle = isValidSender ? 'Remove from Valid Senders' : 'Add to Valid Senders (will not be deleted)';
+            const validBtnIcon = isValidSender
+                ? '<path fill="currentColor" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>'
+                : '<path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>';
+
+            // Known recipient indicator button (only shown if in myRecipients)
+            const knownRecipientBtn = isKnownRecipient
+                ? `<button class="sender-status-btn known-recipient-btn" title="You've sent email to this sender before">
+                    <svg viewBox="0 0 24 24" width="14" height="14">
+                        <path fill="currentColor" d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+                    </svg>
+                   </button>`
+                : '';
+
+            // Checkbox and delete button (hidden for protected rows via CSS)
+            const checkboxHtml = `
                 <label class="checkbox-wrapper result-checkbox">
-                    <input type="checkbox" class="delete-cb" data-index="${originalIndex}" data-email="${GmailCleaner.UI.escapeHtml(r.email)}" onchange="GmailCleaner.Delete.handleFlatSenderCheckboxChange('${jsEscapedEmail}', this.checked)">
+                    <input type="checkbox" class="delete-cb" data-index="${originalIndex}" data-email="${GmailCleaner.UI.escapeHtml(r.email)}" onchange="GmailCleaner.Delete.handleFlatSenderCheckboxChange('${jsEscapedEmail}', this.checked)" ${isProtected ? 'disabled' : ''}>
                     <span class="checkmark"></span>
-                </label>
+                </label>`;
+
+            const deleteBtn = `
+                <button class="unsub-btn delete-btn" id="delete-${originalIndex}" onclick="GmailCleaner.Delete.deleteSenderEmails(${originalIndex})" ${isProtected ? 'disabled' : ''}>
+                    Delete ${r.count}
+                </button>`;
+
+            item.innerHTML = `
+                ${checkboxHtml}
+                <div class="sender-status-buttons">
+                    <button class="sender-status-btn valid-sender-btn ${validBtnClass}" onclick="GmailCleaner.Delete.toggleValidSender('${jsEscapedEmail}')" title="${validBtnTitle}">
+                        <svg viewBox="0 0 24 24" width="14" height="14">${validBtnIcon}</svg>
+                    </button>
+                    ${knownRecipientBtn}
+                </div>
                 <div class="result-content">
                     <div class="result-sender">${GmailCleaner.UI.escapeHtml(r.email)}</div>
                     <div class="result-subject">${GmailCleaner.UI.escapeHtml(r.subjects[0] || 'No subject')}</div>
                     <div class="result-meta">
-                        ${dateRangeDisplay}
+                        ${dateDisplay}
                         <span class="result-count">${r.count} emails</span>
                     </div>
                 </div>
                 <div class="result-actions">
-                    <button class="unsub-btn delete-btn" id="delete-${originalIndex}" onclick="GmailCleaner.Delete.deleteSenderEmails(${originalIndex})">
-                        Delete ${r.count}
-                    </button>
+                    ${deleteBtn}
                 </div>
             `;
             resultsList.appendChild(item);
@@ -477,8 +704,8 @@ GmailCleaner.Delete = {
         row.className = 'result-item domain-row' + (isExpanded ? ' expanded' : '');
         row.dataset.domain = group.domain;
 
-        const dateRange = this.formatDateRange(group.firstDate, group.lastDate);
-        const dateRangeDisplay = dateRange ? `<div class="result-date-range">${dateRange}</div>` : '';
+        const recentDate = this.formatMostRecentDate(group.firstDate, group.lastDate);
+        const dateDisplay = recentDate ? `<div class="result-date-range">${recentDate}</div>` : '';
 
         const sendersTooltip = group.uniqueSenders.join('\n');
         const recipientsTooltip = group.uniqueRecipients.join('\n');
@@ -503,7 +730,7 @@ GmailCleaner.Delete = {
                     ${group.uniqueRecipients.length > 0 ? `<span class="pill recipient-pill" data-tooltip="${GmailCleaner.UI.escapeHtml(recipientsTooltip)}">${group.uniqueRecipients.length} recipient${group.uniqueRecipients.length !== 1 ? 's' : ''}</span>` : ''}
                 </div>
                 <div class="result-meta">
-                    ${dateRangeDisplay}
+                    ${dateDisplay}
                     <span class="result-count">${group.totalEmails} emails</span>
                 </div>
             </div>
@@ -532,26 +759,84 @@ GmailCleaner.Delete = {
 
         sortedSenders.forEach(sender => {
             const originalIndex = GmailCleaner.deleteResults.indexOf(sender);
-            const recipientsTooltip = (sender.recipients || []).join('\n');
+            const recipients = sender.recipients || [];
+            const recipientsTooltip = recipients.join('\n');
             const jsEscapedEmail = sender.email.replace(/'/g, "\\'").replace(/"/g, '\\"');
             const jsEscapedDomain = group.domain.replace(/'/g, "\\'").replace(/"/g, '\\"');
 
+            const emailLower = sender.email.toLowerCase();
+            const isValidSender = this.validSenders.has(emailLower);
+            const isKnownRecipient = this.myRecipients.has(emailLower);
+            const isProtected = isValidSender || isKnownRecipient;
+
+            // Build recipients display: show first recipient inline with arrow
+            let recipientsHtml = '';
+            if (recipients.length > 0) {
+                const firstRecipient = recipients[0];
+                if (recipients.length === 1) {
+                    recipientsHtml = `<span class="recipient-inline">→ ${GmailCleaner.UI.escapeHtml(firstRecipient)}</span>`;
+                } else {
+                    recipientsHtml = `<span class="recipient-inline" data-tooltip="${GmailCleaner.UI.escapeHtml(recipientsTooltip)}">→ ${GmailCleaner.UI.escapeHtml(firstRecipient)} <span class="recipient-more">+${recipients.length - 1}</span></span>`;
+                }
+            }
+
+            // Build subjects display
+            const subjects = sender.subjects || [];
+            const subjectsTooltip = subjects.join('\n');
+            const subjectInline = sender.count === 1 && subjects.length > 0
+                ? `<div class="result-subject">${GmailCleaner.UI.escapeHtml(subjects[0])}</div>`
+                : '';
+
+            // Most recent date
+            const recentDate = this.formatMostRecentDate(sender.first_date, sender.last_date);
+
+            // Email count: pill with tooltip if multiple emails with subjects
+            const emailCountHtml = subjects.length > 0 && sender.count > 1
+                ? `<span class="pill email-count-pill small" data-tooltip="${GmailCleaner.UI.escapeHtml(subjectsTooltip)}">${sender.count} emails</span>`
+                : `<span class="result-count">${sender.count} emails</span>`;
+
+            // Valid sender toggle button
+            const validBtnClass = isValidSender ? 'valid' : 'invalid';
+            const validBtnTitle = isValidSender ? 'Remove from Valid Senders' : 'Add to Valid Senders (will not be deleted)';
+            const validBtnIcon = isValidSender
+                ? '<path fill="currentColor" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>'
+                : '<path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>';
+
+            // Known recipient indicator button (only shown if in myRecipients)
+            const knownRecipientBtn = isKnownRecipient
+                ? `<button class="sender-status-btn known-recipient-btn" title="You've sent email to this sender before">
+                    <svg viewBox="0 0 24 24" width="14" height="14">
+                        <path fill="currentColor" d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
+                    </svg>
+                   </button>`
+                : '';
+
             const senderRow = document.createElement('div');
-            senderRow.className = 'result-item sender-row nested';
+            senderRow.className = 'result-item sender-row nested' + (isProtected ? ' protected-row' : '');
             senderRow.innerHTML = `
                 <label class="checkbox-wrapper result-checkbox">
-                    <input type="checkbox" class="delete-cb sender-cb" data-index="${originalIndex}" data-email="${GmailCleaner.UI.escapeHtml(sender.email)}" data-domain="${GmailCleaner.UI.escapeHtml(group.domain)}" onchange="GmailCleaner.Delete.handleSenderCheckboxChange('${jsEscapedEmail}', '${jsEscapedDomain}', this.checked)">
+                    <input type="checkbox" class="delete-cb sender-cb" data-index="${originalIndex}" data-email="${GmailCleaner.UI.escapeHtml(sender.email)}" data-domain="${GmailCleaner.UI.escapeHtml(group.domain)}" onchange="GmailCleaner.Delete.handleSenderCheckboxChange('${jsEscapedEmail}', '${jsEscapedDomain}', this.checked)" ${isProtected ? 'disabled' : ''}>
                     <span class="checkmark"></span>
                 </label>
+                <div class="sender-status-buttons">
+                    <button class="sender-status-btn valid-sender-btn ${validBtnClass}" onclick="GmailCleaner.Delete.toggleValidSender('${jsEscapedEmail}')" title="${validBtnTitle}">
+                        <svg viewBox="0 0 24 24" width="14" height="14">${validBtnIcon}</svg>
+                    </button>
+                    ${knownRecipientBtn}
+                </div>
                 <div class="result-content">
-                    <div class="result-sender">${GmailCleaner.UI.escapeHtml(sender.email)}</div>
-                    ${sender.recipients && sender.recipients.length > 0 ? `<span class="pill recipient-pill small" data-tooltip="${GmailCleaner.UI.escapeHtml(recipientsTooltip)}">${sender.recipients.length}</span>` : ''}
+                    <div class="sender-recipient-row">
+                        <span class="result-sender">${GmailCleaner.UI.escapeHtml(sender.email)}</span>
+                        ${recipientsHtml}
+                    </div>
+                    ${subjectInline}
                     <div class="result-meta">
-                        <span class="result-count">${sender.count} emails</span>
+                        ${recentDate ? `<span class="result-date">${recentDate}</span>` : ''}
+                        ${emailCountHtml}
                     </div>
                 </div>
                 <div class="result-actions">
-                    <button class="unsub-btn delete-btn" id="delete-${originalIndex}" onclick="GmailCleaner.Delete.deleteSenderEmails(${originalIndex})">
+                    <button class="unsub-btn delete-btn" id="delete-${originalIndex}" onclick="GmailCleaner.Delete.deleteSenderEmails(${originalIndex})" ${isProtected ? 'disabled' : ''}>
                         Delete ${sender.count}
                     </button>
                 </div>
