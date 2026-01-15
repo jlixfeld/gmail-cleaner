@@ -264,7 +264,11 @@ GmailCleaner.Delete = {
         const group = this.domainGroups.find(g => g.domain === domain);
         if (!group) return 'none';
 
-        const senderEmails = group.senders.map(s => s.email);
+        // Only count non-protected senders
+        const selectableSenders = group.senders.filter(s => !this.isProtectedSender(s.email));
+        if (selectableSenders.length === 0) return 'none'; // All senders are protected
+
+        const senderEmails = selectableSenders.map(s => s.email);
         const selectedCount = senderEmails.filter(e => this.selectedSenders.has(e)).length;
 
         if (selectedCount === 0) return 'none';
@@ -310,10 +314,12 @@ GmailCleaner.Delete = {
             selectAll.checked = allDomains > 0 && allSelected;
             selectAll.indeterminate = someSelected && !allSelected;
         } else {
-            const allResults = GmailCleaner.deleteResults.length;
-            const selectedCount = this.selectedSenders.size;
-            selectAll.checked = allResults > 0 && selectedCount === allResults;
-            selectAll.indeterminate = selectedCount > 0 && selectedCount < allResults;
+            // In flat view, only count non-protected senders
+            const selectableResults = GmailCleaner.deleteResults.filter(r => !this.isProtectedSender(r.email));
+            const allSelectable = selectableResults.length;
+            const selectedCount = selectableResults.filter(r => this.selectedSenders.has(r.email)).length;
+            selectAll.checked = allSelectable > 0 && selectedCount === allSelectable;
+            selectAll.indeterminate = selectedCount > 0 && selectedCount < allSelectable;
         }
     },
 
@@ -333,8 +339,11 @@ GmailCleaner.Delete = {
             selectAll = true;
         }
 
-        // Update selectedSenders for all senders in this domain
+        // Update selectedSenders for all non-protected senders in this domain
         group.senders.forEach(sender => {
+            // Skip protected senders (valid senders and known recipients)
+            if (this.isProtectedSender(sender.email)) return;
+
             if (selectAll) {
                 this.selectedSenders.add(sender.email);
             } else {
@@ -946,35 +955,54 @@ GmailCleaner.Delete = {
         this.selectedSenders.clear();
 
         if (this.groupByDomain) {
-            // In domain view, update all domains and their senders
+            // In domain view, update all domains and their senders (skip protected)
             this.domainGroups.forEach(group => {
                 if (checked) {
-                    this.selectedDomains.add(group.domain);
-                    group.senders.forEach(s => this.selectedSenders.add(s.email));
+                    // Only add domain if it has selectable senders
+                    const hasSelectableSenders = group.senders.some(s => !this.isProtectedSender(s.email));
+                    if (hasSelectableSenders) {
+                        this.selectedDomains.add(group.domain);
+                    }
+                    group.senders.forEach(s => {
+                        if (!this.isProtectedSender(s.email)) {
+                            this.selectedSenders.add(s.email);
+                        }
+                    });
                 }
             });
 
-            // Update checkboxes
+            // Update checkboxes (only non-disabled ones)
             document.querySelectorAll('.domain-cb').forEach(cb => {
-                cb.checked = checked;
-                cb.indeterminate = false;
-                const checkmark = cb.nextElementSibling;
-                if (checkmark) checkmark.classList.remove('indeterminate');
+                if (!cb.disabled) {
+                    cb.checked = checked;
+                    cb.indeterminate = false;
+                    const checkmark = cb.nextElementSibling;
+                    if (checkmark) checkmark.classList.remove('indeterminate');
+                }
             });
             document.querySelectorAll('.sender-cb').forEach(cb => {
-                cb.checked = checked;
+                if (!cb.disabled) {
+                    cb.checked = checked;
+                }
             });
         } else {
-            // In flat view, select all sender checkboxes
+            // In flat view, select all sender checkboxes (skip protected)
             if (checked) {
                 GmailCleaner.deleteResults.forEach(r => {
-                    this.selectedSenders.add(r.email);
+                    if (!this.isProtectedSender(r.email)) {
+                        this.selectedSenders.add(r.email);
+                    }
                 });
             }
             document.querySelectorAll('.delete-cb').forEach(cb => {
-                cb.checked = checked;
+                if (!cb.disabled) {
+                    cb.checked = checked;
+                }
             });
         }
+
+        // Update visual states
+        this.updateAllDomainCheckboxStates();
     },
 
     async deleteSenderEmails(index) {
