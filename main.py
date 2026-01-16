@@ -23,8 +23,8 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 
-from app.core import settings
-from app.main import app
+from app.core import settings  # noqa: E402
+from app.main import app  # noqa: E402
 
 
 def main():

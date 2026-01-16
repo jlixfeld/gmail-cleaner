@@ -6,13 +6,22 @@ Functions for deleting emails and scanning senders.
 
 import logging
 import re
+import time
 from collections import defaultdict
 from typing import Optional
 
+from googleapiclient.errors import HttpError
+
 from app.core import state
+from app.core.database import (
+    get_valid_senders as db_get_valid_senders,
+    get_my_recipients as db_get_my_recipients,
+)
 from app.services.auth import get_gmail_service
 from app.services.gmail.helpers import (
     build_gmail_query,
+    build_delete_scan_query,
+    extract_real_domain_from_apple_relay,
     get_recipients_from_headers,
     get_sender_info,
     get_subject,
@@ -21,21 +30,101 @@ from app.services.gmail.helpers import (
 
 logger = logging.getLogger(__name__)
 
+# Rate limit retry configuration
+MAX_RETRIES = 5
+INITIAL_BACKOFF = 2  # seconds
+MAX_BACKOFF = 60  # seconds
 
-def scan_senders_for_delete(limit: int = 1000, filters: Optional[dict] = None):
-    """Scan emails and group by sender for bulk delete.
+
+def execute_with_retry(request, description: str = "API call"):
+    """Execute a Gmail API request with exponential backoff for rate limits.
 
     Args:
-        limit: Maximum emails to scan. 0 = scan all (no limit).
-        filters: Optional Gmail filter options.
-    """
-    # Validate input - negative values are invalid, 0 means "scan all"
-    if limit < 0:
-        state.reset_delete_scan()
-        state.update_delete_scan_status(error="Limit cannot be negative", done=True)
-        return
+        request: The Gmail API request object (has .execute() method)
+        description: Description of the operation for logging
 
-    scan_all = limit == 0
+    Returns:
+        The API response
+
+    Raises:
+        HttpError: If all retries exhausted or non-rate-limit error
+    """
+    backoff = INITIAL_BACKOFF
+    for attempt in range(MAX_RETRIES):
+        try:
+            return request.execute()
+        except HttpError as e:
+            if e.resp.status == 403 and "rateLimitExceeded" in str(e):
+                if attempt < MAX_RETRIES - 1:
+                    logger.warning(
+                        f"Rate limit hit for {description}, retrying in {backoff}s "
+                        f"(attempt {attempt + 1}/{MAX_RETRIES})"
+                    )
+                    time.sleep(backoff)
+                    backoff = min(backoff * 2, MAX_BACKOFF)
+                else:
+                    logger.error(
+                        f"Rate limit exceeded for {description} after {MAX_RETRIES} attempts"
+                    )
+                    raise
+            else:
+                raise
+
+
+def execute_batch_with_retry(batch, description: str = "batch request"):
+    """Execute a Gmail batch request with exponential backoff for rate limits.
+
+    Args:
+        batch: The Gmail batch request object
+        description: Description of the operation for logging
+
+    Raises:
+        HttpError: If all retries exhausted or non-rate-limit error
+    """
+    backoff = INITIAL_BACKOFF
+    for attempt in range(MAX_RETRIES):
+        try:
+            batch.execute()
+            return
+        except HttpError as e:
+            if e.resp.status == 403 and "rateLimitExceeded" in str(e):
+                if attempt < MAX_RETRIES - 1:
+                    logger.warning(
+                        f"Rate limit hit for {description}, retrying in {backoff}s "
+                        f"(attempt {attempt + 1}/{MAX_RETRIES})"
+                    )
+                    time.sleep(backoff)
+                    backoff = min(backoff * 2, MAX_BACKOFF)
+                else:
+                    logger.error(
+                        f"Rate limit exceeded for {description} after {MAX_RETRIES} attempts"
+                    )
+                    raise
+            else:
+                raise
+
+
+def scan_senders_for_delete(limit: int = 0, filters: Optional[dict] = None):
+    """Scan emails and group by sender for bulk delete.
+
+    Scans all emails by default, excluding sent, trash, and spam folders.
+    Results are annotated with is_valid_sender and is_my_recipient flags.
+
+    **Args:**
+        - `limit`: Maximum emails to scan. 0 = scan all (default). Kept for API compat.
+        - `filters`: Optional Gmail filter options.
+    """
+    # Get current user for database lookups
+    user = state.get_current_user()
+    user_email = user.get("email", "")
+
+    # Load valid senders and my recipients from database
+    valid_senders_set: set[str] = set()
+    my_recipients_set: set[str] = set()
+    if user_email:
+        valid_senders_set = db_get_valid_senders(user_email)
+        my_recipients_set = db_get_my_recipients(user_email)
+
     state.reset_delete_scan()
     state.update_delete_scan_status(message="Connecting to Gmail...")
 
@@ -47,37 +136,37 @@ def scan_senders_for_delete(limit: int = 1000, filters: Optional[dict] = None):
     try:
         state.update_delete_scan_status(message="Fetching emails...")
 
-        query = build_gmail_query(filters)
+        # Use delete scan query with default exclusions (-in:sent -in:trash -in:spam)
+        query = build_delete_scan_query(filters)
 
-        # When scanning all, always request max batch; otherwise request remaining
-        max_results = 500 if scan_all else min(limit, 500)
-        results = (
+        # Always scan all emails (max batch size)
+        results = execute_with_retry(
             service.users()
             .messages()
-            .list(userId="me", maxResults=max_results, q=query or None)
-            .execute()
+            .list(userId="me", maxResults=500, q=query or None),
+            "list messages",
         )
 
         messages = results.get("messages", [])
 
-        while "nextPageToken" in results and (scan_all or len(messages) < limit):
-            max_results = 500 if scan_all else min(limit - len(messages), 500)
-            results = (
+        # Paginate through all results
+        while "nextPageToken" in results:
+            results = execute_with_retry(
                 service.users()
                 .messages()
                 .list(
                     userId="me",
-                    maxResults=max_results,
+                    maxResults=500,
                     pageToken=results["nextPageToken"],
                     q=query or None,
-                )
-                .execute()
+                ),
+                "list messages (pagination)",
             )
             messages.extend(results.get("messages", []))
 
-        # Only apply limit if not scanning all
-        if not scan_all:
-            messages = messages[:limit]
+            # Update progress during pagination
+            state.update_delete_scan_status(message=f"Found {len(messages)} emails...")
+
         total = len(messages)
 
         if total == 0:
@@ -101,7 +190,7 @@ def scan_senders_for_delete(limit: int = 1000, filters: Optional[dict] = None):
             }
         )
         processed = 0
-        batch_size = 100
+        batch_size = 25  # Reduced from 100 to avoid "too many concurrent requests"
 
         def process_message(request_id, response, exception) -> None:
             nonlocal processed
@@ -131,11 +220,16 @@ def scan_senders_for_delete(limit: int = 1000, filters: Optional[dict] = None):
                     sender_counts[sender_email]["subjects"].append(subject)
 
                 # Extract domain from sender email
-                domain = (
-                    sender_email.split("@")[-1].lower()
-                    if "@" in sender_email
-                    else sender_email
-                )
+                # Check for Apple privacy relay addresses first
+                real_domain = extract_real_domain_from_apple_relay(sender_email)
+                if real_domain:
+                    domain = real_domain
+                else:
+                    domain = (
+                        sender_email.split("@")[-1].lower()
+                        if "@" in sender_email
+                        else sender_email
+                    )
                 sender_counts[sender_email]["domain"] = domain
 
                 # Extract recipients from To header
@@ -165,16 +259,19 @@ def scan_senders_for_delete(limit: int = 1000, filters: Optional[dict] = None):
                     )
                 )
 
-            batch.execute()
+            execute_batch_with_retry(batch, f"scan batch {i // batch_size + 1}")
 
             progress = int((i + len(batch_ids)) / total * 100)
             state.update_delete_scan_status(
                 progress=progress, message=f"Scanned {processed}/{total} emails"
             )
 
-        # Convert recipient sets to lists before returning
+        # Convert recipient sets to lists and annotate with valid sender / my recipient flags
         for sender_data in sender_counts.values():
             sender_data["recipients"] = list(sender_data["recipients"])
+            sender_email_lower = sender_data["email"].lower()
+            sender_data["is_valid_sender"] = sender_email_lower in valid_senders_set
+            sender_data["is_my_recipient"] = sender_email_lower in my_recipients_set
 
         # Sort by count
         sorted_senders = sorted(
@@ -189,6 +286,7 @@ def scan_senders_for_delete(limit: int = 1000, filters: Optional[dict] = None):
         )
 
     except Exception as e:
+        logger.exception("Error scanning senders for delete")
         state.update_delete_scan_status(error=str(e), done=True)
 
 
@@ -217,11 +315,11 @@ def fetch_message_ids_for_sender(service, sender: str) -> list[str]:
     page_token = None
 
     while True:
-        result = (
+        result = execute_with_retry(
             service.users()
             .messages()
-            .list(userId="me", q=query, maxResults=500, pageToken=page_token)
-            .execute()
+            .list(userId="me", q=query, maxResults=500, pageToken=page_token),
+            f"fetch messages from {sender}",
         )
         message_ids.extend([m["id"] for m in result.get("messages", [])])
         page_token = result.get("nextPageToken")
@@ -247,11 +345,11 @@ def fetch_message_ids_for_domain(service, domain: str) -> list[str]:
     page_token = None
 
     while True:
-        result = (
+        result = execute_with_retry(
             service.users()
             .messages()
-            .list(userId="me", q=query, maxResults=500, pageToken=page_token)
-            .execute()
+            .list(userId="me", q=query, maxResults=500, pageToken=page_token),
+            f"fetch messages from @{domain}",
         )
         message_ids.extend([m["id"] for m in result.get("messages", [])])
         page_token = result.get("nextPageToken")
@@ -689,7 +787,7 @@ def build_known_senders_cache(limit: int = 5000):
         # Extract recipients from all sent emails
         known_senders: set[str] = set()
         processed = 0
-        batch_size = 100
+        batch_size = 25  # Reduced from 100 to avoid "too many concurrent requests"
 
         def process_message(request_id, response, exception) -> None:
             nonlocal processed
@@ -835,7 +933,7 @@ def scan_unknown_senders_for_delete(limit: int = 1000, filters: Optional[dict] =
         )
         processed = 0
         skipped = 0
-        batch_size = 100
+        batch_size = 25  # Reduced from 100 to avoid "too many concurrent requests"
 
         def process_message(request_id, response, exception) -> None:
             nonlocal processed, skipped
@@ -870,11 +968,16 @@ def scan_unknown_senders_for_delete(limit: int = 1000, filters: Optional[dict] =
                     sender_counts[sender_email]["subjects"].append(subject)
 
                 # Extract domain from sender email
-                domain = (
-                    sender_email.split("@")[-1].lower()
-                    if "@" in sender_email
-                    else sender_email
-                )
+                # Check for Apple privacy relay addresses first
+                real_domain = extract_real_domain_from_apple_relay(sender_email)
+                if real_domain:
+                    domain = real_domain
+                else:
+                    domain = (
+                        sender_email.split("@")[-1].lower()
+                        if "@" in sender_email
+                        else sender_email
+                    )
                 sender_counts[sender_email]["domain"] = domain
 
                 # Extract recipients from To header

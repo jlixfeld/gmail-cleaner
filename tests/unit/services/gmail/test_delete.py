@@ -33,11 +33,15 @@ def reset_state():
 class TestScanSendersForDelete:
     """Tests for scan_senders_for_delete function."""
 
-    def test_invalid_limit_negative(self):
-        """Negative limit should set error and return early."""
+    @patch("app.services.gmail.delete.get_gmail_service")
+    def test_negative_limit_scans_all(self, mock_get_service):
+        """Negative limit should be treated as scan all (no limit)."""
+        # Negative limits are treated the same as limit=0 (scan all)
+        mock_get_service.return_value = (None, "Auth not configured")
         scan_senders_for_delete(limit=-10)
         status = get_delete_scan_status()
-        assert status["error"] == "Limit cannot be negative"
+        # Should proceed to auth check, not fail on limit validation
+        assert status["error"] == "Auth not configured"
         assert status["done"] is True
 
     @patch("app.services.gmail.delete.get_gmail_service")
