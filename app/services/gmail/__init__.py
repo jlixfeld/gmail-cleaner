@@ -82,6 +82,22 @@ from app.services.gmail.unread import (
     archive_unread_by_senders_background,
     delete_unread_by_senders_background,
 )
+from app.services.gmail.senders import (
+    add_valid_sender,
+    remove_valid_sender,
+    get_valid_senders,
+    get_valid_senders_list,
+    is_valid_sender,
+    get_my_recipients,
+    get_my_recipients_list,
+    get_my_recipients_count,
+    get_recipients_scan_status,
+    scan_recipients_background,
+    add_recipient_override,
+    remove_recipient_override,
+    get_recipient_overrides,
+    get_recipient_overrides_list,
+)
 
 # Export private helper functions with underscore-prefixed aliases for backward compatibility.
 # These are used by tests that import the original function names from this module.
@@ -149,4 +165,20 @@ __all__ = [
     "mark_read_and_archive_by_senders_background",
     "mark_read_by_senders_background",
     "scan_unread_by_sender",
+    # Senders (valid senders whitelist and recipients)
+    "add_valid_sender",
+    "remove_valid_sender",
+    "get_valid_senders",
+    "get_valid_senders_list",
+    "is_valid_sender",
+    "get_my_recipients",
+    "get_my_recipients_list",
+    "get_my_recipients_count",
+    "get_recipients_scan_status",
+    "scan_recipients_background",
+    # Recipient overrides
+    "add_recipient_override",
+    "remove_recipient_override",
+    "get_recipient_overrides",
+    "get_recipient_overrides_list",
 ]

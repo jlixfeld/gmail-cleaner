@@ -60,4 +60,20 @@ from .gmail import (
     build_known_senders_cache,
     get_known_senders_status,
     scan_unknown_senders_for_delete,
+    # Valid Senders & Recipients
+    add_valid_sender,
+    remove_valid_sender,
+    get_valid_senders,
+    get_valid_senders_list,
+    is_valid_sender,
+    get_my_recipients,
+    get_my_recipients_list,
+    get_my_recipients_count,
+    get_recipients_scan_status,
+    scan_recipients_background,
+    # Recipient Overrides
+    add_recipient_override,
+    remove_recipient_override,
+    get_recipient_overrides,
+    get_recipient_overrides_list,
 )
