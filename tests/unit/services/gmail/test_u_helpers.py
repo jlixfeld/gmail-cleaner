@@ -488,3 +488,28 @@ class TestExtractRealDomainFromAppleRelay:
         """Reply-To format with longer hash should work."""
         email = "m06wql7oeowh9d2bc40d8eef3df20c04ffad2f32b3f21_at_reply_kickstarter_com_f7s3hdmddeycxc_52cd0895@icloud.com"
         assert extract_real_domain_from_apple_relay(email) == "kickstarter.com"
+
+    def test_markets_tld(self):
+        """Newer .markets gTLD should be recognized."""
+        email = "support_at_mailer_alpaca_markets_r6601abwwf71rc_4a4d9051@icloud.com"
+        assert extract_real_domain_from_apple_relay(email) == "alpaca.markets"
+
+    def test_africa_tld(self):
+        """Newer .africa gTLD should be recognized."""
+        email = "mark_at_tinka_africa_jy75fr5a4za454_785d4973@icloud.com"
+        assert extract_real_domain_from_apple_relay(email) == "tinka.africa"
+
+    def test_eu_tld(self):
+        """.eu TLD should be recognized."""
+        email = "lukas_at_ltri_eu_rxp80ebm23b1k4_d45g0895@icloud.com"
+        assert extract_real_domain_from_apple_relay(email) == "ltri.eu"
+
+    def test_es_tld(self):
+        """.es TLD should be recognized."""
+        email = "marc_at_sniff_es_rxp672bm21a2k4_d15g0895@icloud.com"
+        assert extract_real_domain_from_apple_relay(email) == "sniff.es"
+
+    def test_plus_addressing_in_relay(self):
+        """Plus addressing in original local part should work."""
+        email = "marc+lists_at_sniff_es_rxp672bm21a2k4_d15g0895@icloud.com"
+        assert extract_real_domain_from_apple_relay(email) == "sniff.es"

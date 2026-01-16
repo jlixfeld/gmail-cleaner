@@ -11,6 +11,8 @@ from email.utils import getaddresses, parseaddr
 from urllib.parse import urlparse
 from typing import Optional, Union, Any
 
+import tldextract
+
 
 # Common compound TLDs that need 3 parts (e.g., amazon.co.uk)
 COMPOUND_TLDS = {"co.uk", "com.au", "co.nz", "co.jp", "co.kr", "com.br", "com.mx"}
@@ -52,6 +54,9 @@ def extract_real_domain_from_apple_relay(email: str) -> str | None:
     Apple's privacy relay services (Hide My Email, Sign in with Apple) encode
     the original sender's email in the local part using `_at_` as a separator.
 
+    Uses `tldextract` with the Public Suffix List to support all valid TLDs,
+    including newer gTLDs like .markets, .africa, .app, etc.
+
     Handles:
     - Hide My Email: xxx_at_domain_com_hash@icloud.com
     - Sign in with Apple: xxx_at_domain_com_hash@privaterelay.appleid.com
@@ -71,6 +76,10 @@ def extract_real_domain_from_apple_relay(email: str) -> str | None:
         ...     "noreply_at_e_fiverr_com_z4gur7mrhh_4fe6f996@privaterelay.appleid.com"
         ... )
         'fiverr.com'
+        >>> extract_real_domain_from_apple_relay(
+        ...     "support_at_mailer_alpaca_markets_r6601abwwf71rc@icloud.com"
+        ... )
+        'alpaca.markets'
         >>> extract_real_domain_from_apple_relay("user@example.com")
         # Returns None
     """
@@ -92,63 +101,23 @@ def extract_real_domain_from_apple_relay(email: str) -> str | None:
     if len(parts) < 2:
         return None
 
-    # domain_hash part: "e_fiverr_com_z4gur7mrhh_4fe6f996"
+    # domain_hash part: "mailer_alpaca_markets_r6601abwwf71rc_4a4d9051"
     # or "kickstarter_com_f5s7hcm6d6y2x2_58cd0895"
     domain_part = parts[1]
     segments = domain_part.split("_")
 
-    # Known TLDs to identify where the domain ends
-    known_tlds = {
-        "com",
-        "net",
-        "org",
-        "io",
-        "co",
-        "uk",
-        "ca",
-        "de",
-        "fr",
-        "au",
-        "jp",
-        "kr",
-        "br",
-        "mx",
-        "nz",
-        "edu",
-        "gov",
-        "mil",
-        "info",
-        "biz",
-        "us",
-        "tv",
-        "me",
-        "app",
-        "dev",
-        "ai",
-        "cloud",
-        "tech",
-        "online",
-        "store",
-        "shop",
-    }
+    # Try progressively longer domain candidates
+    # tldextract validates TLDs against the Public Suffix List
+    best_match = None
+    for end in range(1, len(segments) + 1):
+        candidate = ".".join(segments[:end])
+        result = tldextract.extract(candidate)
 
-    # Find the last known TLD in the segments - that marks the end of the domain
-    tld_index = -1
-    for i, seg in enumerate(segments):
-        if seg in known_tlds:
-            tld_index = i
+        # Check if this forms a valid domain with a known TLD
+        if result.suffix and result.domain:
+            best_match = result.top_domain_under_public_suffix
 
-    if tld_index == -1:
-        return None
-
-    # Take segments up to and including the TLD
-    domain_segments = segments[: tld_index + 1]
-
-    if domain_segments:
-        full_domain = ".".join(domain_segments)
-        return get_registrable_domain(full_domain)
-
-    return None
+    return best_match
 
 
 def sanitize_gmail_query_value(value: str) -> str:
