@@ -91,6 +91,33 @@ GmailCleaner.Delete = {
   // Track if we've already scanned recipients this session
   recipientsScanComplete: false,
 
+  // Load existing scan results when Delete tab is shown
+  async loadExistingResults() {
+    // Skip if we already have results loaded
+    if (GmailCleaner.deleteResults && GmailCleaner.deleteResults.length > 0) {
+      return;
+    }
+
+    try {
+      // Check if there are cached results on the server
+      const statusResponse = await fetch("/api/delete-scan-status");
+      const status = await statusResponse.json();
+
+      // If a scan completed previously, load the results
+      if (status.done && !status.error && status.progress === 100) {
+        const resultsResponse = await fetch("/api/delete-scan-results");
+        const results = await resultsResponse.json();
+
+        if (results && results.length > 0) {
+          GmailCleaner.deleteResults = results;
+          this.displayResults();
+        }
+      }
+    } catch (error) {
+      console.error("Error loading existing results:", error);
+    }
+  },
+
   // Auto-scan recipients when Delete tab is selected
   async autoScanRecipients() {
     if (this.recipientsScanInProgress) return;
@@ -780,7 +807,7 @@ GmailCleaner.Delete = {
                     </button>
                 </div>
                 <div class="result-content">
-                    <div class="result-sender">${GmailCleaner.UI.escapeHtml(r.email)}</div>
+                    <div class="result-sender">${GmailCleaner.UI.escapeHtml(r.display_email || r.email)}</div>
                     <div class="result-subject">${GmailCleaner.UI.escapeHtml(r.subjects[0] || "No subject")}</div>
                     <div class="result-meta">
                         ${dateDisplay}

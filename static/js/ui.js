@@ -13,6 +13,28 @@ GmailCleaner.UI = {
                 this.showView(view);
             });
         });
+
+        // Initialize the currently active view (trigger any auto-loading)
+        const activeNav = document.querySelector('.nav-item.active');
+        if (activeNav) {
+            const currentView = activeNav.dataset.view;
+            // Call view-specific initialization without switching views
+            this.initializeView(currentView);
+        }
+    },
+
+    // Initialize view-specific features without switching tabs
+    initializeView(viewName) {
+        if (viewName === 'delete' && GmailCleaner.Delete) {
+            // Load any existing scan results
+            if (typeof GmailCleaner.Delete.loadExistingResults === 'function') {
+                GmailCleaner.Delete.loadExistingResults();
+            }
+            // Auto-scan recipients for protection features
+            if (typeof GmailCleaner.Delete.autoScanRecipients === 'function') {
+                GmailCleaner.Delete.autoScanRecipients();
+            }
+        }
     },
 
     showView(viewName) {
@@ -65,10 +87,17 @@ GmailCleaner.UI = {
             }
         }
 
-        // Auto-scan recipients when switching to Delete Emails view
+        // Auto-scan recipients and load existing results when switching to Delete Emails view
         if (viewName === 'delete') {
-            if (GmailCleaner.Delete && typeof GmailCleaner.Delete.autoScanRecipients === 'function') {
-                GmailCleaner.Delete.autoScanRecipients();
+            if (GmailCleaner.Delete) {
+                // Load any existing scan results that weren't displayed
+                if (typeof GmailCleaner.Delete.loadExistingResults === 'function') {
+                    GmailCleaner.Delete.loadExistingResults();
+                }
+                // Auto-scan recipients for protection features
+                if (typeof GmailCleaner.Delete.autoScanRecipients === 'function') {
+                    GmailCleaner.Delete.autoScanRecipients();
+                }
             }
         }
     },
