@@ -7,6 +7,25 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import create_app
+from app.core.database import init_database
+
+
+@pytest.fixture(autouse=True)
+def temp_database(monkeypatch, tmp_path, request):
+    """Use a temporary database for tests that need it.
+
+    Only initializes database for tests in gmail service and delete-related tests.
+    Skip for auth tests to avoid interfering with OAuth mocking.
+    """
+    # Skip database initialization for auth tests
+    if "auth" in str(request.fspath):
+        yield None
+        return
+
+    db_path = str(tmp_path / "test_gmail_cleaner.db")
+    monkeypatch.setattr("app.core.database.get_db_path", lambda: db_path)
+    init_database()
+    yield db_path
 
 
 @pytest.fixture

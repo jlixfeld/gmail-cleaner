@@ -15,7 +15,7 @@ from fastapi.templating import Jinja2Templates
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-from app.core import settings
+from app.core import settings, init_database
 from app.core.rate_limit import limiter
 from app.api import status_router, actions_router
 
@@ -120,6 +120,7 @@ async def lifespan(app: FastAPI):
     """Application lifespan - startup and shutdown events."""
     # Startup
     print(f"{settings.app_name} v{settings.app_version} starting...")
+    init_database()
     yield
     # Shutdown
     print("Shutting down...")

@@ -31,3 +31,8 @@ coverage.xml
 
 # GitHub Copilot instructions (user specific)
 .github/copilot-instructions.md
+
+# SQLite database files
+data/gmail_cleaner.db
+data/gmail_cleaner.db-shm
+data/gmail_cleaner.db-wal
