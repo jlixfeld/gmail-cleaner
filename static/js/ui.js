@@ -64,6 +64,13 @@ GmailCleaner.UI = {
                 document.getElementById('unreadResultsSection').classList.remove('hidden');
             }
         }
+
+        // Auto-scan recipients when switching to Delete Emails view
+        if (viewName === 'delete') {
+            if (GmailCleaner.Delete && typeof GmailCleaner.Delete.autoScanRecipients === 'function') {
+                GmailCleaner.Delete.autoScanRecipients();
+            }
+        }
     },
 
     escapeHtml(text) {

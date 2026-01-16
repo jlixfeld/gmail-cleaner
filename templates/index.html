@@ -1,706 +1,1156 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Gmail Unsubscribe</title>
     <!-- Modular CSS (cache-busted) -->
-    <link rel="stylesheet" href="/static/css/base.css?v={{ cache_bust }}">
-    <link rel="stylesheet" href="/static/css/layout.css?v={{ cache_bust }}">
-    <link rel="stylesheet" href="/static/css/filters.css?v={{ cache_bust }}">
-    <link rel="stylesheet" href="/static/css/components.css?v={{ cache_bust }}">
-    <link rel="stylesheet" href="/static/css/responsive.css?v={{ cache_bust }}">
+    <link rel="stylesheet" href="/static/css/base.css?v={{ cache_bust }}" />
+    <link rel="stylesheet" href="/static/css/layout.css?v={{ cache_bust }}" />
+    <link rel="stylesheet" href="/static/css/filters.css?v={{ cache_bust }}" />
+    <link
+      rel="stylesheet"
+      href="/static/css/components.css?v={{ cache_bust }}"
+    />
+    <link
+      rel="stylesheet"
+      href="/static/css/responsive.css?v={{ cache_bust }}"
+    />
     <!-- Litepicker Date Range Picker -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/litepicker@latest/dist/litepicker.css">
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/litepicker@latest/dist/litepicker.css"
+    />
     <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
-</head>
-<body>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
     <div class="app-container">
-        <!-- Header -->
-        <header class="header">
-            <div class="header-left">
-                <button class="menu-btn" onclick="toggleSidebar()">
-                    <svg viewBox="0 0 24 24" width="24" height="24">
-                        <path fill="currentColor" d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
-                    </svg>
-                </button>
-                <div class="logo">
-                    <svg viewBox="0 0 24 24" width="32" height="32">
-                        <path fill="#EA4335" d="M22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6zm-2 0l-8 5-8-5h16zm0 12H4V8l8 5 8-5v10z"/>
-                    </svg>
-                    <span class="logo-text">Unsubscribe</span>
-                </div>
-            </div>
-            <div class="header-right">
-                <div class="user-section" id="userSection">
-                    <!-- Filled by JavaScript -->
-                </div>
-            </div>
-        </header>
-
-        <div class="main-wrapper">
-            <!-- Sidebar -->
-            <aside class="sidebar" id="sidebar">
-                <a href="https://buymeacoffee.com/gururagavendra" target="_blank" rel="noopener" class="compose-btn" style="text-decoration: none;">
-                    <svg viewBox="0 0 24 24" width="24" height="24">
-                        <path fill="currentColor" d="M2 21V19H20V21H2ZM20 8V5H18V8H20ZM20 3C20.5523 3 21 3.44772 21 4V9C21 9.55228 20.5523 10 20 10H18V13C18 15.2091 16.2091 17 14 17H8C5.79086 17 4 15.2091 4 13V4C4 3.44772 4.44772 3 5 3H20ZM16 5H6V13C6 14.1046 6.89543 15 8 15H14C15.1046 15 16 14.1046 16 13V5Z"/>
-                    </svg>
-                    <span>Support Project</span>
-                </a>
-
-                <nav class="nav-menu">
-                    <a href="#" class="nav-item active" data-view="unsubscribe">
-                        <svg viewBox="0 0 24 24" width="20" height="20">
-                            <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM4 12c0-4.42 3.58-8 8-8 1.85 0 3.55.63 4.9 1.69L5.69 16.9C4.63 15.55 4 13.85 4 12zm8 8c-1.85 0-3.55-.63-4.9-1.69L18.31 7.1C19.37 8.45 20 10.15 20 12c0 4.42-3.58 8-8 8z"/>
-                        </svg>
-                        <span>Unsubscribe</span>
-                    </a>
-                    <a href="#" class="nav-item" data-view="delete">
-                        <svg viewBox="0 0 24 24" width="20" height="20">
-                            <path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-                        </svg>
-                        <span>Delete Emails</span>
-                    </a>
-                    <a href="#" class="nav-item" data-view="markread">
-                        <svg viewBox="0 0 24 24" width="20" height="20">
-                            <path fill="currentColor" d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17 7.48 12l-1.41 1.41L11.66 19l12-12-1.42-1.41zM.41 13.41L6 19l1.41-1.41L1.83 12 .41 13.41z"/>
-                        </svg>
-                        <span>Mark as Read</span>
-                    </a>
-                    <a href="#" class="nav-item" data-view="unread">
-                        <svg viewBox="0 0 24 24" width="20" height="20">
-                            <path fill="currentColor" d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
-                        </svg>
-                        <span>Unread Emails</span>
-                    </a>
-                </nav>
-
-                <div class="sidebar-footer">
-                    <div class="storage-info">
-                        <div class="storage-bar">
-                            <div class="storage-used" id="storageUsed"></div>
-                        </div>
-                        <span class="storage-text" id="storageText">Ready to scan</span>
-                    </div>
-                </div>
-            </aside>
-
-            <!-- Main Content -->
-            <main class="main-content">
-                <!-- Global Filter Bar -->
-                <div class="filter-bar hidden" id="filterBar">
-                    <div class="filter-bar-content">
-                        <span class="filter-label">
-                            <svg viewBox="0 0 24 24" width="18" height="18">
-                                <path fill="currentColor" d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"/>
-                            </svg>
-                            Filters:
-                        </span>
-                        <div class="filter-group">
-                            <label for="filterOlderThan">Older than</label>
-                            <select id="filterOlderThan" class="filter-select">
-                                <option value="">Any time</option>
-                                <option value="7d">7 days</option>
-                                <option value="30d">30 days</option>
-                                <option value="90d">90 days</option>
-                                <option value="180d">6 months</option>
-                                <option value="365d">1 year</option>
-                                <option value="custom">Custom date range</option>
-                            </select>
-                        </div>
-                        <!-- Custom Date Range Picker (Hidden by default) -->
-                        <div class="filter-group date-range-group hidden" id="dateRangeGroup">
-                            <label for="dateRangePicker">Select date range</label>
-                            <input type="text" id="dateRangePicker" class="date-range-input" placeholder="YYYY-MM-DD - YYYY-MM-DD">
-                            <div id="datePickerContainer" class="date-picker-container"></div>
-                        </div>
-                        <div class="filter-group">
-                            <label for="filterLargerThan">Larger than</label>
-                            <select id="filterLargerThan" class="filter-select">
-                                <option value="">Any size</option>
-                                <option value="1M">1 MB</option>
-                                <option value="5M">5 MB</option>
-                                <option value="10M">10 MB</option>
-                                <option value="25M">25 MB</option>
-                            </select>
-                        </div>
-                        <div class="filter-group">
-                            <label for="filterCategory">Category</label>
-                            <select id="filterCategory" class="filter-select">
-                                <option value="">All mail</option>
-                                <option value="promotions">Promotions</option>
-                                <option value="social">Social</option>
-                                <option value="updates">Updates</option>
-                                <option value="forums">Forums</option>
-                                <option value="primary">Primary</option>
-                            </select>
-                        </div>
-                        <div class="filter-group">
-                            <label for="filterSender">From Sender</label>
-                            <input type="text" id="filterSender" class="filter-input" placeholder="email@domain.com or domain.com">
-                        </div>
-                        <div class="filter-group">
-                            <label for="filterLabel">Label</label>
-                            <select id="filterLabel" class="filter-select">
-                                <option value="">All labels</option>
-                                <!-- Populated by JavaScript after sign-in -->
-                            </select>
-                        </div>
-                        <button class="filter-clear-btn" id="filterClearBtn" title="Clear all filters">
-                            <svg viewBox="0 0 24 24" width="16" height="16">
-                                <path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                            </svg>
-                            Clear
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Content Area -->
-                <div class="main-content-inner">
-                    <!-- Login View -->
-                    <div class="view" id="loginView">
-                        <div class="empty-state">
-                            <div class="empty-icon">
-                                <svg viewBox="0 0 24 24" width="120" height="120">
-                                    <path fill="#dadce0" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/>
-                                </svg>
-                            </div>
-                            <h2>Sign in to get started</h2>
-                            <p>Connect your Gmail account to scan for unsubscribe links</p>
-                            <button class="btn btn-primary btn-large" onclick="signIn()" id="signInBtn">
-                                <svg viewBox="0 0 24 24" width="20" height="20">
-                                    <path fill="currentColor" d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"/>
-                                </svg>
-                                Sign in with Google
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Unsubscribe View (combined scan + results) -->
-                    <div class="view hidden" id="unsubscribeView">
-                        <div class="content-header">
-                            <h1>Unsubscribe from Emails</h1>
-                            <p>Find and unsubscribe from newsletters and promotional emails</p>
-                        </div>
-
-                    <!-- Info Note -->
-                    <div class="info-note">
-                        <svg viewBox="0 0 24 24" width="18" height="18">
-                            <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
-                        </svg>
-                        <div>
-                            <strong>Unsubscribe</strong> - One-click unsubscribe (direct link available).<br>
-                            <strong>Open Link</strong> - Opens a page where you may need to confirm or select options to unsubscribe.
-                        </div>
-                    </div>
-
-                    <div class="card">
-                        <div class="card-header">
-                            <h3>Scan for Unsubscribe Links</h3>
-                        </div>
-                        <div class="card-body">
-                            <div class="scan-row">
-                                <div class="form-group scan-limit-group" style="margin-bottom: 0;">
-                                    <label for="emailLimit">Emails to scan (0 for All)</label>
-                                    <div class="limit-input-wrapper">
-                                        <input type="number" id="emailLimit" class="form-input limit-input"
-                                               value="500" min="0" max="999999" placeholder="Enter limit"
-                                               oninput="handleLimitWarning('emailLimit')">
-                                    </div>
-                                    <div class="limit-warning hidden" id="emailLimitWarning">
-                                        <svg viewBox="0 0 24 24" width="14" height="14">
-                                            <path fill="currentColor" d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
-                                        </svg>
-                                        <span>Scanning all emails may take a long time for large mailboxes</span>
-                                    </div>
-                                </div>
-                                <button class="btn btn-primary" id="scanBtn" onclick="startScan()">
-                                    <svg viewBox="0 0 24 24" width="18" height="18">
-                                        <path fill="currentColor" d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
-                                    </svg>
-                                    Scan Emails
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Progress Card -->
-                    <div class="card hidden" id="progressCard">
-                        <div class="card-body">
-                            <div class="progress-container">
-                                <div class="progress-bar" id="progressBar"></div>
-                            </div>
-                            <p class="progress-text" id="progressText">Starting...</p>
-                        </div>
-                    </div>
-
-                    <!-- Results Section -->
-                    <div class="hidden" id="resultsSection">
-                        <div class="toolbar">
-                            <div class="toolbar-left">
-                                <label class="checkbox-wrapper">
-                                    <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
-                                    <span class="checkmark"></span>
-                                </label>
-                                <span class="results-count"><span id="resultsBadge">0</span> senders found</span>
-                                <button class="sort-btn" onclick="toggleSortOrder('subscription')" title="Sorted: Newest first (click to toggle)">
-                                    <span>Date</span>
-                                    <span class="sort-indicator sort-desc" id="subscriptionSortIndicator">
-                                        <svg viewBox="0 0 24 24" width="14" height="14">
-                                            <path fill="currentColor" d="M7 10l5 5 5-5H7z"/>
-                                        </svg>
-                                    </span>
-                                </button>
-                            </div>
-                            <div class="toolbar-right">
-                                <button class="sort-btn" onclick="toggleSortOrder('subscription')" title="Sorted: Newest first (click for oldest)">
-                                    <span>Date</span>
-                                    <span class="sort-indicator sort-desc" id="subscriptionSortIndicator">
-                                        <svg viewBox="0 0 24 24" width="14" height="14">
-                                            <path fill="currentColor" d="M7 10l5 5 5-5H7z"/>
-                                        </svg>
-                                    </span>
-                                </button>
-                                <button class="btn btn-danger" onclick="deleteSelectedSubscriptions()" title="Move all emails from selected senders to Trash">
-                                    Delete Selected
-                                </button>
-                                <button class="btn btn-combo" onclick="unsubscribeAndDeleteSelected()" title="Unsubscribe from selected senders and move their emails to Trash">
-                                    Unsub & Delete Selected
-                                </button>
-                                <button class="btn btn-primary" onclick="unsubscribeSelected()" title="Unsubscribe from selected senders (emails remain in inbox)">
-                                    Unsubscribe Selected
-                                </button>
-                            </div>
-                        </div>
-
-                        <div class="results-list" id="resultsList">
-                            <!-- Filled by JavaScript -->
-                        </div>
-                    </div>
-
-                    <div class="empty-state" id="noResults">
-                        <div class="empty-icon">
-                            <svg viewBox="0 0 24 24" width="80" height="80">
-                                <path fill="#dadce0" d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
-                            </svg>
-                        </div>
-                        <h2>Scan to find unsubscribe links</h2>
-                        <p>We'll search your emails for newsletters and show you who you can unsubscribe from</p>
-                    </div>
-                </div>
-
-                <!-- Mark as Read View -->
-                <div class="view hidden" id="markreadView">
-                    <div class="content-header">
-                        <h1>Mark Emails as Read</h1>
-                        <p>Bulk mark unread emails as read to clean up your inbox</p>
-                    </div>
-
-                    <div class="card">
-                        <div class="card-header">
-                            <h3>Unread Emails</h3>
-                        </div>
-                        <div class="card-body">
-                            <div class="unread-info">
-                                <div class="unread-count" id="unreadCount">
-                                    <span class="count-number">—</span>
-                                    <span class="count-label">unread emails</span>
-                                </div>
-                                <button class="btn btn-secondary" onclick="refreshUnreadCount()">
-                                    <svg viewBox="0 0 24 24" width="18" height="18">
-                                        <path fill="currentColor" d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/>
-                                    </svg>
-                                    Refresh
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card">
-                        <div class="card-header">
-                            <h3>Mark as Read</h3>
-                        </div>
-                        <div class="card-body">
-                            <div class="form-group">
-                                <label for="markReadCount">Number of emails to mark as read</label>
-                                <select id="markReadCount" class="form-select">
-                                    <option value="50">50 emails</option>
-                                    <option value="100" selected>100 emails</option>
-                                    <option value="250">250 emails</option>
-                                    <option value="500">500 emails</option>
-                                    <option value="1000">1000 emails</option>
-                                    <option value="5000">5000 emails</option>
-                                    <option value="all">All unread emails</option>
-                                </select>
-                            </div>
-                            <button class="btn btn-primary" id="markReadBtn" onclick="startMarkAsRead()">
-                                <svg viewBox="0 0 24 24" width="18" height="18">
-                                    <path fill="currentColor" d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17 7.48 12l-1.41 1.41L11.66 19l12-12-1.42-1.41zM.41 13.41L6 19l1.41-1.41L1.83 12 .41 13.41z"/>
-                                </svg>
-                                Mark as Read
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Progress Card -->
-                    <div class="card hidden" id="markReadProgressCard">
-                        <div class="card-header">
-                            <h3>Progress</h3>
-                        </div>
-                        <div class="card-body">
-                            <div class="progress-container">
-                                <div class="progress-bar" id="markReadProgressBar"></div>
-                            </div>
-                            <p class="progress-text" id="markReadProgressText">Starting...</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Unread Emails View -->
-                <div class="view hidden" id="unreadView">
-                    <div class="content-header">
-                        <h1>Unread Emails by Sender</h1>
-                        <p>Scan unread emails and organize them by sender</p>
-                    </div>
-
-                    <!-- Info Note -->
-                    <div class="info-note">
-                        <svg viewBox="0 0 24 24" width="18" height="18">
-                            <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
-                        </svg>
-                        <span><strong>Mark as Read</strong> removes unread status. <strong>Archive</strong> removes from inbox. <strong>Delete</strong> moves to trash.</span>
-                    </div>
-
-                    <div class="card">
-                        <div class="card-header">
-                            <h3>Scan & Actions</h3>
-                        </div>
-                        <div class="card-body">
-                            <!-- Row 1: Scan options -->
-                            <div class="action-row">
-                                <div class="form-group scan-limit-group" style="margin-bottom: 0;">
-                                    <label for="unreadScanLimit">Emails to scan (0 for All)</label>
-                                    <div class="limit-input-wrapper">
-                                        <input type="number" id="unreadScanLimit" class="form-input limit-input"
-                                               value="1000" min="0" max="999999" placeholder="Enter limit"
-                                               oninput="handleLimitWarning('unreadScanLimit')">
-                                    </div>
-                                    <div class="limit-warning hidden" id="unreadScanLimitWarning">
-                                        <svg viewBox="0 0 24 24" width="14" height="14">
-                                            <path fill="currentColor" d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
-                                        </svg>
-                                        <span>Scanning all emails may take a long time for large mailboxes</span>
-                                    </div>
-                                </div>
-                                <div class="form-group" style="margin-bottom: 0;">
-                                    <label>Scope</label>
-                                    <div class="toggle-wrapper">
-                                        <label class="toggle-switch">
-                                            <input type="checkbox" id="unreadScopeToggle" onchange="toggleUnreadScope()">
-                                            <span class="toggle-slider"></span>
-                                        </label>
-                                        <span id="unreadScopeLabel">Inbox only</span>
-                                    </div>
-                                </div>
-                                <button class="btn btn-primary" id="unreadScanBtn" onclick="startUnreadScan()">
-                                    <svg viewBox="0 0 24 24" width="18" height="18">
-                                        <path fill="currentColor" d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
-                                    </svg>
-                                    Scan Unread
-                                </button>
-                            </div>
-
-                            <!-- Row 2: Bulk action buttons -->
-                            <div class="action-row action-buttons-row">
-                                <div class="action-group">
-                                    <span class="action-group-label">Actions:</span>
-                                    <button class="btn btn-action" id="unreadMarkReadBtn" onclick="markReadSelected()" disabled>
-                                        <svg viewBox="0 0 24 24" width="16" height="16">
-                                            <path fill="currentColor" d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17 7.48 12l-1.41 1.41L11.66 19l12-12-1.42-1.41zM.41 13.41L6 19l1.41-1.41L1.83 12 .41 13.41z"/>
-                                        </svg>
-                                        Mark as Read
-                                    </button>
-                                    <button class="btn btn-action" id="unreadMarkReadArchiveBtn" onclick="markReadAndArchiveSelected()" disabled>
-                                        <svg viewBox="0 0 24 24" width="16" height="16">
-                                            <path fill="currentColor" d="M20.54 5.23l-1.39-1.68C18.88 3.21 18.47 3 18 3H6c-.47 0-.88.21-1.16.55L3.46 5.23C3.17 5.57 3 6.02 3 6.5V19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6.5c0-.48-.17-.93-.46-1.27zM12 17.5L6.5 12H10v-2h4v2h3.5L12 17.5zM5.12 5l.81-1h12l.94 1H5.12z"/>
-                                        </svg>
-                                        Mark Read + Archive
-                                    </button>
-                                    <button class="btn btn-action" id="unreadArchiveBtn" onclick="archiveUnreadSelected()" disabled>
-                                        <svg viewBox="0 0 24 24" width="16" height="16">
-                                            <path fill="currentColor" d="M20.54 5.23l-1.39-1.68C18.88 3.21 18.47 3 18 3H6c-.47 0-.88.21-1.16.55L3.46 5.23C3.17 5.57 3 6.02 3 6.5V19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6.5c0-.48-.17-.93-.46-1.27zM12 17.5L6.5 12H10v-2h4v2h3.5L12 17.5zM5.12 5l.81-1h12l.94 1H5.12z"/>
-                                        </svg>
-                                        Archive Only
-                                    </button>
-                                    <button class="btn btn-action btn-danger" id="unreadDeleteBtn" onclick="deleteUnreadSelected()" disabled>
-                                        <svg viewBox="0 0 24 24" width="16" height="16">
-                                            <path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-                                        </svg>
-                                        Delete
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Unread Progress Card -->
-                    <div class="card hidden" id="unreadProgressCard">
-                        <div class="card-body">
-                            <div class="progress-container">
-                                <div class="progress-bar" id="unreadProgressBar"></div>
-                            </div>
-                            <p class="progress-text" id="unreadProgressText">Starting...</p>
-                        </div>
-                    </div>
-
-                    <!-- Unread Results Section -->
-                    <div class="hidden" id="unreadResultsSection">
-                        <div class="toolbar">
-                            <div class="toolbar-left">
-                                <label class="checkbox-wrapper">
-                                    <input type="checkbox" id="unreadSelectAll" onchange="toggleUnreadSelectAll()">
-                                    <span class="checkmark"></span>
-                                </label>
-                                <span class="results-count"><span id="unreadSendersBadge">0</span> senders found</span>
-                                <button class="sort-btn" onclick="toggleSortOrder('unread')" title="Sorted: Newest first (click to toggle)">
-                                    <span>Date</span>
-                                    <span class="sort-indicator sort-desc" id="unreadSortIndicator">
-                                        <svg viewBox="0 0 24 24" width="14" height="14">
-                                            <path fill="currentColor" d="M7 10l5 5 5-5H7z"/>
-                                        </svg>
-                                    </span>
-                                </button>
-                            </div>
-                            <div class="toolbar-right" style="display: flex; align-items: center; gap: 16px;">
-                                <button class="sort-btn" onclick="toggleSortOrder('unread')" title="Sorted: Newest first (click for oldest)">
-                                    <span>Date</span>
-                                    <span class="sort-indicator sort-desc" id="unreadSortIndicator">
-                                        <svg viewBox="0 0 24 24" width="14" height="14">
-                                            <path fill="currentColor" d="M7 10l5 5 5-5H7z"/>
-                                        </svg>
-                                    </span>
-                                </button>
-                                <div style="display: flex; align-items: center; gap: 6px;">
-                                    <label for="unreadDisplayLimit" style="font-size: 13px; color: #5f6368;">Show:</label>
-                                    <select id="unreadDisplayLimit" class="form-select" style="width: auto; padding: 4px 8px;" onchange="GmailCleaner.Unread.changeDisplayLimit()">
-                                        <option value="10">10</option>
-                                        <option value="20" selected>20</option>
-                                        <option value="50">50</option>
-                                        <option value="100">100</option>
-                                    </select>
-                                </div>
-                                <label style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: #5f6368; cursor: pointer;">
-                                    <input type="checkbox" id="unreadSkipConfirm" style="cursor: pointer;">
-                                    Skip confirmations
-                                </label>
-                            </div>
-                        </div>
-
-                        <div class="results-list" id="unreadResultsList" style="max-height: 600px; overflow-y: auto;">
-                            <!-- Filled by JavaScript -->
-                        </div>
-                    </div>
-
-                    <div class="empty-state" id="unreadNoResults">
-                        <div class="empty-icon">
-                            <svg viewBox="0 0 24 24" width="80" height="80">
-                                <path fill="#dadce0" d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/>
-                            </svg>
-                        </div>
-                        <h2>Scan to find unread emails</h2>
-                        <p>We'll group your unread emails by sender so you can quickly clean up your inbox</p>
-                    </div>
-                </div>
-
-                <!-- Delete Emails View -->
-                <div class="view hidden" id="deleteView">
-                    <div class="content-header">
-                        <h1>Delete Emails by Sender</h1>
-                        <p>Scan your inbox and organize or delete emails from specific senders</p>
-                    </div>
-
-                    <!-- Info Note -->
-                    <div class="info-note">
-                        <svg viewBox="0 0 24 24" width="18" height="18">
-                            <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
-                        </svg>
-                        <span>Deleted emails are moved to Trash and kept for 30 days. You can recover them from Gmail's Trash folder if needed.</span>
-                    </div>
-
-                    <div class="card">
-                        <div class="card-header">
-                            <h3>Scan & Actions</h3>
-                        </div>
-                        <div class="card-body">
-                            <!-- Row 1: Scan -->
-                            <div class="action-row">
-                                <div class="form-group scan-limit-group" style="margin-bottom: 0;">
-                                    <label for="deleteScanLimit">Emails to scan (0 for All)</label>
-                                    <div class="limit-input-wrapper">
-                                        <input type="number" id="deleteScanLimit" class="form-input limit-input"
-                                               value="1000" min="0" max="999999" placeholder="Enter limit"
-                                               oninput="handleLimitWarning('deleteScanLimit')">
-                                    </div>
-                                    <div class="limit-warning hidden" id="deleteScanLimitWarning">
-                                        <svg viewBox="0 0 24 24" width="14" height="14">
-                                            <path fill="currentColor" d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
-                                        </svg>
-                                        <span>Scanning all emails may take a long time for large mailboxes</span>
-                                    </div>
-                                </div>
-                                <button class="btn btn-primary" id="deleteScanBtn" onclick="startDeleteScan()">
-                                    <svg viewBox="0 0 24 24" width="18" height="18">
-                                        <path fill="currentColor" d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
-                                    </svg>
-                                    Scan Senders
-                                </button>
-                                <div class="form-group" style="margin-bottom: 0;">
-                                    <div class="toggle-wrapper">
-                                        <label class="toggle-switch">
-                                            <input type="checkbox" id="filterKnownSendersToggle">
-                                            <span class="toggle-slider"></span>
-                                        </label>
-                                        <span>Filter Known Senders</span>
-                                    </div>
-                                </div>
-                                <div class="action-divider"></div>
-                                <div class="form-group scan-limit-group" style="margin-bottom: 0;">
-                                    <label for="sentScanLimit">Sent emails to scan (0 for All)</label>
-                                    <div class="limit-input-wrapper">
-                                        <input type="number" id="sentScanLimit" class="form-input limit-input"
-                                               value="0" min="0" max="999999" placeholder="Enter limit"
-                                               oninput="handleLimitWarning('sentScanLimit')">
-                                    </div>
-                                    <div class="limit-warning hidden" id="sentScanLimitWarning">
-                                        <svg viewBox="0 0 24 24" width="14" height="14">
-                                            <path fill="currentColor" d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
-                                        </svg>
-                                        <span>Scanning all sent emails may take a long time for large mailboxes</span>
-                                    </div>
-                                </div>
-                                <button class="btn btn-secondary" id="deleteUnknownBtn" onclick="startKnownSendersScan()" title="Build cache of known senders from sent emails">
-                                    <svg viewBox="0 0 24 24" width="18" height="18">
-                                        <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
-                                    </svg>
-                                    Scan Known Senders
-                                </button>
-                            </div>
-                            <!-- Known senders status -->
-                            <div class="known-senders-status">
-                                <span id="knownSendersStatusText" class="text-muted">Known senders: Not cached</span>
-                            </div>
-
-                            <!-- Row 2: All action buttons (disabled until scan) -->
-                            <div class="action-row action-buttons-row">
-                                <div class="action-group">
-                                    <span class="action-group-label">Organize:</span>
-                                    <div class="label-dropdown-wrapper">
-                                        <button class="btn btn-action" id="applyLabelBtn" onclick="GmailCleaner.Labels.showApplyLabelDropdown(event)" disabled>
-                                            <svg viewBox="0 0 24 24" width="16" height="16">
-                                                <path fill="currentColor" d="M17.63 5.84C17.27 5.33 16.67 5 16 5L5 5.01C3.9 5.01 3 5.9 3 7v10c0 1.1.9 1.99 2 1.99L16 19c.67 0 1.27-.33 1.63-.84L22 12l-4.37-6.16z"/>
-                                            </svg>
-                                            Label
-                                        </button>
-                                        <div class="label-dropdown" id="applyLabelDropdown"></div>
-                                    </div>
-                                    <button class="btn btn-action" id="archiveBtn" onclick="GmailCleaner.Labels.archiveSelected()" disabled>
-                                        <svg viewBox="0 0 24 24" width="16" height="16">
-                                            <path fill="currentColor" d="M20.54 5.23l-1.39-1.68C18.88 3.21 18.47 3 18 3H6c-.47 0-.88.21-1.16.55L3.46 5.23C3.17 5.57 3 6.02 3 6.5V19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6.5c0-.48-.17-.93-.46-1.27zM12 17.5L6.5 12H10v-2h4v2h3.5L12 17.5zM5.12 5l.81-1h12l.94 1H5.12z"/>
-                                        </svg>
-                                        Archive
-                                    </button>
-                                    <button class="btn btn-action btn-important-action" id="importantBtn" onclick="GmailCleaner.Labels.markImportantSelected()" disabled>
-                                        <svg viewBox="0 0 24 24" width="16" height="16">
-                                            <path fill="currentColor" d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
-                                        </svg>
-                                        Important
-                                    </button>
-                                </div>
-                                <div class="action-divider"></div>
-                                <div class="action-group">
-                                    <span class="action-group-label">Export:</span>
-                                    <button class="btn btn-action btn-download-action" id="downloadBtn" onclick="downloadSelectedEmails()" disabled>
-                                        <svg viewBox="0 0 24 24" width="16" height="16">
-                                            <path fill="currentColor" d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
-                                        </svg>
-                                        Download
-                                    </button>
-                                </div>
-                                <div class="action-divider"></div>
-                                <div class="action-group">
-                                    <span class="action-group-label">Delete:</span>
-                                    <button class="btn btn-action btn-delete-action" id="deleteSelectedBtn" onclick="deleteSelectedSenders()" disabled>
-                                        <svg viewBox="0 0 24 24" width="16" height="16">
-                                            <path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-                                        </svg>
-                                        Delete all selected emails
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Delete Progress Card -->
-                    <div class="card hidden" id="deleteProgressCard">
-                        <div class="card-body">
-                            <div class="progress-container">
-                                <div class="progress-bar" id="deleteProgressBar"></div>
-                            </div>
-                            <p class="progress-text" id="deleteProgressText">Starting...</p>
-                        </div>
-                    </div>
-
-                    <!-- Delete Results Section -->
-                    <div class="hidden" id="deleteResultsSection">
-                        <div class="toolbar">
-                            <div class="toolbar-left">
-                                <label class="checkbox-wrapper">
-                                    <input type="checkbox" id="deleteSelectAll" onchange="toggleDeleteSelectAll()">
-                                    <span class="checkmark"></span>
-                                </label>
-                                <span class="results-count"><span id="deleteSendersBadge">0</span> senders found</span>
-                                <button class="sort-btn" onclick="toggleSortOrder('delete')" title="Sorted: Newest first (click to toggle)">
-                                    <span>Date</span>
-                                    <span class="sort-indicator sort-desc" id="deleteSortIndicator">
-                                        <svg viewBox="0 0 24 24" width="14" height="14">
-                                            <path fill="currentColor" d="M7 10l5 5 5-5H7z"/>
-                                        </svg>
-                                    </span>
-                                </button>
-                            </div>
-                            <div class="toolbar-right">
-                                <div class="toggle-wrapper group-toggle">
-                                    <span>Group by Domain</span>
-                                    <label class="toggle-switch">
-                                        <input type="checkbox" id="groupByDomainToggle" onchange="GmailCleaner.Delete.toggleGroupByDomain()">
-                                        <span class="toggle-slider"></span>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="results-list" id="deleteResultsList">
-                            <!-- Filled by JavaScript -->
-                        </div>
-                    </div>
-
-                    <div class="empty-state" id="deleteNoResults">
-                        <div class="empty-icon">
-                            <svg viewBox="0 0 24 24" width="80" height="80">
-                                <path fill="#dadce0" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-                            </svg>
-                        </div>
-                        <h2>Scan to find email senders</h2>
-                        <p>We'll show you who's sending you the most emails so you can delete them in bulk</p>
-                    </div>
-                </div>
-
-                </div>
-            </main>
+      <!-- Header -->
+      <header class="header">
+        <div class="header-left">
+          <button class="menu-btn" onclick="toggleSidebar()">
+            <svg viewBox="0 0 24 24" width="24" height="24">
+              <path
+                fill="currentColor"
+                d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"
+              />
+            </svg>
+          </button>
+          <div class="logo">
+            <svg viewBox="0 0 24 24" width="32" height="32">
+              <path
+                fill="#EA4335"
+                d="M22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6zm-2 0l-8 5-8-5h16zm0 12H4V8l8 5 8-5v10z"
+              />
+            </svg>
+            <span class="logo-text">Unsubscribe</span>
+          </div>
         </div>
+        <div class="header-right">
+          <div class="user-section" id="userSection">
+            <!-- Filled by JavaScript -->
+          </div>
+        </div>
+      </header>
+
+      <div class="main-wrapper">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+          <a
+            href="https://buymeacoffee.com/gururagavendra"
+            target="_blank"
+            rel="noopener"
+            class="compose-btn"
+            style="text-decoration: none"
+          >
+            <svg viewBox="0 0 24 24" width="24" height="24">
+              <path
+                fill="currentColor"
+                d="M2 21V19H20V21H2ZM20 8V5H18V8H20ZM20 3C20.5523 3 21 3.44772 21 4V9C21 9.55228 20.5523 10 20 10H18V13C18 15.2091 16.2091 17 14 17H8C5.79086 17 4 15.2091 4 13V4C4 3.44772 4.44772 3 5 3H20ZM16 5H6V13C6 14.1046 6.89543 15 8 15H14C15.1046 15 16 14.1046 16 13V5Z"
+              />
+            </svg>
+            <span>Support Project</span>
+          </a>
+
+          <nav class="nav-menu">
+            <a href="#" class="nav-item active" data-view="unsubscribe">
+              <svg viewBox="0 0 24 24" width="20" height="20">
+                <path
+                  fill="currentColor"
+                  d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM4 12c0-4.42 3.58-8 8-8 1.85 0 3.55.63 4.9 1.69L5.69 16.9C4.63 15.55 4 13.85 4 12zm8 8c-1.85 0-3.55-.63-4.9-1.69L18.31 7.1C19.37 8.45 20 10.15 20 12c0 4.42-3.58 8-8 8z"
+                />
+              </svg>
+              <span>Unsubscribe</span>
+            </a>
+            <a href="#" class="nav-item" data-view="delete">
+              <svg viewBox="0 0 24 24" width="20" height="20">
+                <path
+                  fill="currentColor"
+                  d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
+                />
+              </svg>
+              <span>Delete Emails</span>
+            </a>
+            <a href="#" class="nav-item" data-view="markread">
+              <svg viewBox="0 0 24 24" width="20" height="20">
+                <path
+                  fill="currentColor"
+                  d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17 7.48 12l-1.41 1.41L11.66 19l12-12-1.42-1.41zM.41 13.41L6 19l1.41-1.41L1.83 12 .41 13.41z"
+                />
+              </svg>
+              <span>Mark as Read</span>
+            </a>
+            <a href="#" class="nav-item" data-view="unread">
+              <svg viewBox="0 0 24 24" width="20" height="20">
+                <path
+                  fill="currentColor"
+                  d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"
+                />
+              </svg>
+              <span>Unread Emails</span>
+            </a>
+          </nav>
+
+          <div class="sidebar-footer">
+            <div class="storage-info">
+              <div class="storage-bar">
+                <div class="storage-used" id="storageUsed"></div>
+              </div>
+              <span class="storage-text" id="storageText">Ready to scan</span>
+            </div>
+          </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+          <!-- Global Filter Bar -->
+          <div class="filter-bar hidden" id="filterBar">
+            <div class="filter-bar-content">
+              <span class="filter-label">
+                <svg viewBox="0 0 24 24" width="18" height="18">
+                  <path
+                    fill="currentColor"
+                    d="M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z"
+                  />
+                </svg>
+                Filters:
+              </span>
+              <div class="filter-group">
+                <label for="filterOlderThan">Older than</label>
+                <select id="filterOlderThan" class="filter-select">
+                  <option value="">Any time</option>
+                  <option value="7d">7 days</option>
+                  <option value="30d">30 days</option>
+                  <option value="90d">90 days</option>
+                  <option value="180d">6 months</option>
+                  <option value="365d">1 year</option>
+                  <option value="custom">Custom date range</option>
+                </select>
+              </div>
+              <!-- Custom Date Range Picker (Hidden by default) -->
+              <div
+                class="filter-group date-range-group hidden"
+                id="dateRangeGroup"
+              >
+                <label for="dateRangePicker">Select date range</label>
+                <input
+                  type="text"
+                  id="dateRangePicker"
+                  class="date-range-input"
+                  placeholder="YYYY-MM-DD - YYYY-MM-DD"
+                />
+                <div
+                  id="datePickerContainer"
+                  class="date-picker-container"
+                ></div>
+              </div>
+              <div class="filter-group">
+                <label for="filterLargerThan">Larger than</label>
+                <select id="filterLargerThan" class="filter-select">
+                  <option value="">Any size</option>
+                  <option value="1M">1 MB</option>
+                  <option value="5M">5 MB</option>
+                  <option value="10M">10 MB</option>
+                  <option value="25M">25 MB</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label for="filterCategory">Category</label>
+                <select id="filterCategory" class="filter-select">
+                  <option value="">All mail</option>
+                  <option value="promotions">Promotions</option>
+                  <option value="social">Social</option>
+                  <option value="updates">Updates</option>
+                  <option value="forums">Forums</option>
+                  <option value="primary">Primary</option>
+                </select>
+              </div>
+              <div class="filter-group">
+                <label for="filterSender">From Sender</label>
+                <input
+                  type="text"
+                  id="filterSender"
+                  class="filter-input"
+                  placeholder="email@domain.com or domain.com"
+                />
+              </div>
+              <div class="filter-group">
+                <label for="filterLabel">Label</label>
+                <select id="filterLabel" class="filter-select">
+                  <option value="">All labels</option>
+                  <!-- Populated by JavaScript after sign-in -->
+                </select>
+              </div>
+              <button
+                class="filter-clear-btn"
+                id="filterClearBtn"
+                title="Clear all filters"
+              >
+                <svg viewBox="0 0 24 24" width="16" height="16">
+                  <path
+                    fill="currentColor"
+                    d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
+                  />
+                </svg>
+                Clear
+              </button>
+            </div>
+          </div>
+
+          <!-- Content Area -->
+          <div class="main-content-inner">
+            <!-- Login View -->
+            <div class="view" id="loginView">
+              <div class="empty-state">
+                <div class="empty-icon">
+                  <svg viewBox="0 0 24 24" width="120" height="120">
+                    <path
+                      fill="#dadce0"
+                      d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"
+                    />
+                  </svg>
+                </div>
+                <h2>Sign in to get started</h2>
+                <p>Connect your Gmail account to scan for unsubscribe links</p>
+                <button
+                  class="btn btn-primary btn-large"
+                  onclick="signIn()"
+                  id="signInBtn"
+                >
+                  <svg viewBox="0 0 24 24" width="20" height="20">
+                    <path
+                      fill="currentColor"
+                      d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"
+                    />
+                  </svg>
+                  Sign in with Google
+                </button>
+              </div>
+            </div>
+
+            <!-- Unsubscribe View (combined scan + results) -->
+            <div class="view hidden" id="unsubscribeView">
+              <div class="content-header">
+                <h1>Unsubscribe from Emails</h1>
+                <p>
+                  Find and unsubscribe from newsletters and promotional emails
+                </p>
+              </div>
+
+              <!-- Info Note -->
+              <div class="info-note">
+                <svg viewBox="0 0 24 24" width="18" height="18">
+                  <path
+                    fill="currentColor"
+                    d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"
+                  />
+                </svg>
+                <div>
+                  <strong>Unsubscribe</strong> - One-click unsubscribe (direct
+                  link available).<br />
+                  <strong>Open Link</strong> - Opens a page where you may need
+                  to confirm or select options to unsubscribe.
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-header">
+                  <h3>Scan for Unsubscribe Links</h3>
+                </div>
+                <div class="card-body">
+                  <div class="scan-row">
+                    <div
+                      class="form-group scan-limit-group"
+                      style="margin-bottom: 0"
+                    >
+                      <label for="emailLimit">Emails to scan (0 for All)</label>
+                      <div class="limit-input-wrapper">
+                        <input
+                          type="number"
+                          id="emailLimit"
+                          class="form-input limit-input"
+                          value="500"
+                          min="0"
+                          max="999999"
+                          placeholder="Enter limit"
+                          oninput="handleLimitWarning('emailLimit')"
+                        />
+                      </div>
+                      <div class="limit-warning hidden" id="emailLimitWarning">
+                        <svg viewBox="0 0 24 24" width="14" height="14">
+                          <path
+                            fill="currentColor"
+                            d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"
+                          />
+                        </svg>
+                        <span
+                          >Scanning all emails may take a long time for large
+                          mailboxes</span
+                        >
+                      </div>
+                    </div>
+                    <button
+                      class="btn btn-primary"
+                      id="scanBtn"
+                      onclick="startScan()"
+                    >
+                      <svg viewBox="0 0 24 24" width="18" height="18">
+                        <path
+                          fill="currentColor"
+                          d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"
+                        />
+                      </svg>
+                      Scan Emails
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Progress Card -->
+              <div class="card hidden" id="progressCard">
+                <div class="card-body">
+                  <div class="progress-container">
+                    <div class="progress-bar" id="progressBar"></div>
+                  </div>
+                  <p class="progress-text" id="progressText">Starting...</p>
+                </div>
+              </div>
+
+              <!-- Results Section -->
+              <div class="hidden" id="resultsSection">
+                <div class="toolbar">
+                  <div class="toolbar-left">
+                    <label class="checkbox-wrapper">
+                      <input
+                        type="checkbox"
+                        id="selectAll"
+                        onchange="toggleSelectAll()"
+                      />
+                      <span class="checkmark"></span>
+                    </label>
+                    <span class="results-count"
+                      ><span id="resultsBadge">0</span> senders found</span
+                    >
+                    <button
+                      class="sort-btn"
+                      onclick="toggleSortOrder('subscription')"
+                      title="Sorted: Newest first (click to toggle)"
+                    >
+                      <span>Date</span>
+                      <span
+                        class="sort-indicator sort-desc"
+                        id="subscriptionSortIndicator"
+                      >
+                        <svg viewBox="0 0 24 24" width="14" height="14">
+                          <path fill="currentColor" d="M7 10l5 5 5-5H7z" />
+                        </svg>
+                      </span>
+                    </button>
+                  </div>
+                  <div class="toolbar-right">
+                    <button
+                      class="sort-btn"
+                      onclick="toggleSortOrder('subscription')"
+                      title="Sorted: Newest first (click for oldest)"
+                    >
+                      <span>Date</span>
+                      <span
+                        class="sort-indicator sort-desc"
+                        id="subscriptionSortIndicator"
+                      >
+                        <svg viewBox="0 0 24 24" width="14" height="14">
+                          <path fill="currentColor" d="M7 10l5 5 5-5H7z" />
+                        </svg>
+                      </span>
+                    </button>
+                    <button
+                      class="btn btn-danger"
+                      onclick="deleteSelectedSubscriptions()"
+                      title="Move all emails from selected senders to Trash"
+                    >
+                      Delete Selected
+                    </button>
+                    <button
+                      class="btn btn-combo"
+                      onclick="unsubscribeAndDeleteSelected()"
+                      title="Unsubscribe from selected senders and move their emails to Trash"
+                    >
+                      Unsub & Delete Selected
+                    </button>
+                    <button
+                      class="btn btn-primary"
+                      onclick="unsubscribeSelected()"
+                      title="Unsubscribe from selected senders (emails remain in inbox)"
+                    >
+                      Unsubscribe Selected
+                    </button>
+                  </div>
+                </div>
+
+                <div class="results-list" id="resultsList">
+                  <!-- Filled by JavaScript -->
+                </div>
+              </div>
+
+              <div class="empty-state" id="noResults">
+                <div class="empty-icon">
+                  <svg viewBox="0 0 24 24" width="80" height="80">
+                    <path
+                      fill="#dadce0"
+                      d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"
+                    />
+                  </svg>
+                </div>
+                <h2>Scan to find unsubscribe links</h2>
+                <p>
+                  We'll search your emails for newsletters and show you who you
+                  can unsubscribe from
+                </p>
+              </div>
+            </div>
+
+            <!-- Mark as Read View -->
+            <div class="view hidden" id="markreadView">
+              <div class="content-header">
+                <h1>Mark Emails as Read</h1>
+                <p>Bulk mark unread emails as read to clean up your inbox</p>
+              </div>
+
+              <div class="card">
+                <div class="card-header">
+                  <h3>Unread Emails</h3>
+                </div>
+                <div class="card-body">
+                  <div class="unread-info">
+                    <div class="unread-count" id="unreadCount">
+                      <span class="count-number">—</span>
+                      <span class="count-label">unread emails</span>
+                    </div>
+                    <button
+                      class="btn btn-secondary"
+                      onclick="refreshUnreadCount()"
+                    >
+                      <svg viewBox="0 0 24 24" width="18" height="18">
+                        <path
+                          fill="currentColor"
+                          d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"
+                        />
+                      </svg>
+                      Refresh
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-header">
+                  <h3>Mark as Read</h3>
+                </div>
+                <div class="card-body">
+                  <div class="form-group">
+                    <label for="markReadCount"
+                      >Number of emails to mark as read</label
+                    >
+                    <select id="markReadCount" class="form-select">
+                      <option value="50">50 emails</option>
+                      <option value="100" selected>100 emails</option>
+                      <option value="250">250 emails</option>
+                      <option value="500">500 emails</option>
+                      <option value="1000">1000 emails</option>
+                      <option value="5000">5000 emails</option>
+                      <option value="all">All unread emails</option>
+                    </select>
+                  </div>
+                  <button
+                    class="btn btn-primary"
+                    id="markReadBtn"
+                    onclick="startMarkAsRead()"
+                  >
+                    <svg viewBox="0 0 24 24" width="18" height="18">
+                      <path
+                        fill="currentColor"
+                        d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17 7.48 12l-1.41 1.41L11.66 19l12-12-1.42-1.41zM.41 13.41L6 19l1.41-1.41L1.83 12 .41 13.41z"
+                      />
+                    </svg>
+                    Mark as Read
+                  </button>
+                </div>
+              </div>
+
+              <!-- Progress Card -->
+              <div class="card hidden" id="markReadProgressCard">
+                <div class="card-header">
+                  <h3>Progress</h3>
+                </div>
+                <div class="card-body">
+                  <div class="progress-container">
+                    <div class="progress-bar" id="markReadProgressBar"></div>
+                  </div>
+                  <p class="progress-text" id="markReadProgressText">
+                    Starting...
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Unread Emails View -->
+            <div class="view hidden" id="unreadView">
+              <div class="content-header">
+                <h1>Unread Emails by Sender</h1>
+                <p>Scan unread emails and organize them by sender</p>
+              </div>
+
+              <!-- Info Note -->
+              <div class="info-note">
+                <svg viewBox="0 0 24 24" width="18" height="18">
+                  <path
+                    fill="currentColor"
+                    d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"
+                  />
+                </svg>
+                <span
+                  ><strong>Mark as Read</strong> removes unread status.
+                  <strong>Archive</strong> removes from inbox.
+                  <strong>Delete</strong> moves to trash.</span
+                >
+              </div>
+
+              <div class="card">
+                <div class="card-header">
+                  <h3>Scan & Actions</h3>
+                </div>
+                <div class="card-body">
+                  <!-- Row 1: Scan options -->
+                  <div class="action-row">
+                    <div
+                      class="form-group scan-limit-group"
+                      style="margin-bottom: 0"
+                    >
+                      <label for="unreadScanLimit"
+                        >Emails to scan (0 for All)</label
+                      >
+                      <div class="limit-input-wrapper">
+                        <input
+                          type="number"
+                          id="unreadScanLimit"
+                          class="form-input limit-input"
+                          value="1000"
+                          min="0"
+                          max="999999"
+                          placeholder="Enter limit"
+                          oninput="handleLimitWarning('unreadScanLimit')"
+                        />
+                      </div>
+                      <div
+                        class="limit-warning hidden"
+                        id="unreadScanLimitWarning"
+                      >
+                        <svg viewBox="0 0 24 24" width="14" height="14">
+                          <path
+                            fill="currentColor"
+                            d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"
+                          />
+                        </svg>
+                        <span
+                          >Scanning all emails may take a long time for large
+                          mailboxes</span
+                        >
+                      </div>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0">
+                      <label>Scope</label>
+                      <div class="toggle-wrapper">
+                        <label class="toggle-switch">
+                          <input
+                            type="checkbox"
+                            id="unreadScopeToggle"
+                            onchange="toggleUnreadScope()"
+                          />
+                          <span class="toggle-slider"></span>
+                        </label>
+                        <span id="unreadScopeLabel">Inbox only</span>
+                      </div>
+                    </div>
+                    <button
+                      class="btn btn-primary"
+                      id="unreadScanBtn"
+                      onclick="startUnreadScan()"
+                    >
+                      <svg viewBox="0 0 24 24" width="18" height="18">
+                        <path
+                          fill="currentColor"
+                          d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"
+                        />
+                      </svg>
+                      Scan Unread
+                    </button>
+                  </div>
+
+                  <!-- Row 2: Bulk action buttons -->
+                  <div class="action-row action-buttons-row">
+                    <div class="action-group">
+                      <span class="action-group-label">Actions:</span>
+                      <button
+                        class="btn btn-action"
+                        id="unreadMarkReadBtn"
+                        onclick="markReadSelected()"
+                        disabled
+                      >
+                        <svg viewBox="0 0 24 24" width="16" height="16">
+                          <path
+                            fill="currentColor"
+                            d="M18 7l-1.41-1.41-6.34 6.34 1.41 1.41L18 7zm4.24-1.41L11.66 16.17 7.48 12l-1.41 1.41L11.66 19l12-12-1.42-1.41zM.41 13.41L6 19l1.41-1.41L1.83 12 .41 13.41z"
+                          />
+                        </svg>
+                        Mark as Read
+                      </button>
+                      <button
+                        class="btn btn-action"
+                        id="unreadMarkReadArchiveBtn"
+                        onclick="markReadAndArchiveSelected()"
+                        disabled
+                      >
+                        <svg viewBox="0 0 24 24" width="16" height="16">
+                          <path
+                            fill="currentColor"
+                            d="M20.54 5.23l-1.39-1.68C18.88 3.21 18.47 3 18 3H6c-.47 0-.88.21-1.16.55L3.46 5.23C3.17 5.57 3 6.02 3 6.5V19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6.5c0-.48-.17-.93-.46-1.27zM12 17.5L6.5 12H10v-2h4v2h3.5L12 17.5zM5.12 5l.81-1h12l.94 1H5.12z"
+                          />
+                        </svg>
+                        Mark Read + Archive
+                      </button>
+                      <button
+                        class="btn btn-action"
+                        id="unreadArchiveBtn"
+                        onclick="archiveUnreadSelected()"
+                        disabled
+                      >
+                        <svg viewBox="0 0 24 24" width="16" height="16">
+                          <path
+                            fill="currentColor"
+                            d="M20.54 5.23l-1.39-1.68C18.88 3.21 18.47 3 18 3H6c-.47 0-.88.21-1.16.55L3.46 5.23C3.17 5.57 3 6.02 3 6.5V19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6.5c0-.48-.17-.93-.46-1.27zM12 17.5L6.5 12H10v-2h4v2h3.5L12 17.5zM5.12 5l.81-1h12l.94 1H5.12z"
+                          />
+                        </svg>
+                        Archive Only
+                      </button>
+                      <button
+                        class="btn btn-action btn-danger"
+                        id="unreadDeleteBtn"
+                        onclick="deleteUnreadSelected()"
+                        disabled
+                      >
+                        <svg viewBox="0 0 24 24" width="16" height="16">
+                          <path
+                            fill="currentColor"
+                            d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
+                          />
+                        </svg>
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Unread Progress Card -->
+              <div class="card hidden" id="unreadProgressCard">
+                <div class="card-body">
+                  <div class="progress-container">
+                    <div class="progress-bar" id="unreadProgressBar"></div>
+                  </div>
+                  <p class="progress-text" id="unreadProgressText">
+                    Starting...
+                  </p>
+                </div>
+              </div>
+
+              <!-- Unread Results Section -->
+              <div class="hidden" id="unreadResultsSection">
+                <div class="toolbar">
+                  <div class="toolbar-left">
+                    <label class="checkbox-wrapper">
+                      <input
+                        type="checkbox"
+                        id="unreadSelectAll"
+                        onchange="toggleUnreadSelectAll()"
+                      />
+                      <span class="checkmark"></span>
+                    </label>
+                    <span class="results-count"
+                      ><span id="unreadSendersBadge">0</span> senders
+                      found</span
+                    >
+                    <button
+                      class="sort-btn"
+                      onclick="toggleSortOrder('unread')"
+                      title="Sorted: Newest first (click to toggle)"
+                    >
+                      <span>Date</span>
+                      <span
+                        class="sort-indicator sort-desc"
+                        id="unreadSortIndicator"
+                      >
+                        <svg viewBox="0 0 24 24" width="14" height="14">
+                          <path fill="currentColor" d="M7 10l5 5 5-5H7z" />
+                        </svg>
+                      </span>
+                    </button>
+                  </div>
+                  <div
+                    class="toolbar-right"
+                    style="display: flex; align-items: center; gap: 16px"
+                  >
+                    <button
+                      class="sort-btn"
+                      onclick="toggleSortOrder('unread')"
+                      title="Sorted: Newest first (click for oldest)"
+                    >
+                      <span>Date</span>
+                      <span
+                        class="sort-indicator sort-desc"
+                        id="unreadSortIndicator"
+                      >
+                        <svg viewBox="0 0 24 24" width="14" height="14">
+                          <path fill="currentColor" d="M7 10l5 5 5-5H7z" />
+                        </svg>
+                      </span>
+                    </button>
+                    <div style="display: flex; align-items: center; gap: 6px">
+                      <label
+                        for="unreadDisplayLimit"
+                        style="font-size: 13px; color: #5f6368"
+                        >Show:</label
+                      >
+                      <select
+                        id="unreadDisplayLimit"
+                        class="form-select"
+                        style="width: auto; padding: 4px 8px"
+                        onchange="GmailCleaner.Unread.changeDisplayLimit()"
+                      >
+                        <option value="10">10</option>
+                        <option value="20" selected>20</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                      </select>
+                    </div>
+                    <label
+                      style="
+                        display: flex;
+                        align-items: center;
+                        gap: 6px;
+                        font-size: 13px;
+                        color: #5f6368;
+                        cursor: pointer;
+                      "
+                    >
+                      <input
+                        type="checkbox"
+                        id="unreadSkipConfirm"
+                        style="cursor: pointer"
+                      />
+                      Skip confirmations
+                    </label>
+                  </div>
+                </div>
+
+                <div
+                  class="results-list"
+                  id="unreadResultsList"
+                  style="max-height: 600px; overflow-y: auto"
+                >
+                  <!-- Filled by JavaScript -->
+                </div>
+              </div>
+
+              <div class="empty-state" id="unreadNoResults">
+                <div class="empty-icon">
+                  <svg viewBox="0 0 24 24" width="80" height="80">
+                    <path
+                      fill="#dadce0"
+                      d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"
+                    />
+                  </svg>
+                </div>
+                <h2>Scan to find unread emails</h2>
+                <p>
+                  We'll group your unread emails by sender so you can quickly
+                  clean up your inbox
+                </p>
+              </div>
+            </div>
+
+            <!-- Delete Emails View -->
+            <div class="view hidden" id="deleteView">
+              <div class="content-header">
+                <h1>Delete Emails by Sender</h1>
+                <p>
+                  Scan your inbox and organize or delete emails from specific
+                  senders
+                </p>
+              </div>
+
+              <!-- Info Note -->
+              <div class="info-note">
+                <svg viewBox="0 0 24 24" width="18" height="18">
+                  <path
+                    fill="currentColor"
+                    d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"
+                  />
+                </svg>
+                <span
+                  >Deleted emails are moved to Trash and kept for 30 days. You
+                  can recover them from Gmail's Trash folder if needed.</span
+                >
+              </div>
+
+              <div class="card">
+                <div class="card-header">
+                  <h3>Scan & Actions</h3>
+                </div>
+                <div class="card-body">
+                  <!-- Row 1: Scan and Reference Buttons -->
+                  <div class="action-row">
+                    <button
+                      class="btn btn-primary"
+                      id="deleteScanBtn"
+                      onclick="startDeleteScan()"
+                    >
+                      <svg viewBox="0 0 24 24" width="18" height="18">
+                        <path
+                          fill="currentColor"
+                          d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"
+                        />
+                      </svg>
+                      Scan Senders
+                    </button>
+                    <div class="action-divider"></div>
+                    <button
+                      class="btn reference-btn valid-senders"
+                      id="showValidSendersBtn"
+                      onclick="GmailCleaner.Delete.showValidSendersList()"
+                    >
+                      <svg viewBox="0 0 24 24" width="16" height="16">
+                        <path
+                          fill="currentColor"
+                          d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
+                        />
+                      </svg>
+                      Valid Senders (<span id="validSendersCount">0</span>)
+                    </button>
+                    <button
+                      class="btn reference-btn known-recipients"
+                      id="showKnownRecipientsBtn"
+                      onclick="GmailCleaner.Delete.showKnownRecipientsList()"
+                    >
+                      <svg viewBox="0 0 24 24" width="16" height="16">
+                        <path
+                          fill="currentColor"
+                          d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"
+                        />
+                      </svg>
+                      Known Recipients (<span id="knownRecipientsCount">0</span
+                      >)
+                    </button>
+                  </div>
+
+                  <!-- Row 2: All action buttons (disabled until scan) -->
+                  <div class="action-row action-buttons-row">
+                    <div class="action-group">
+                      <span class="action-group-label">Organize:</span>
+                      <div class="label-dropdown-wrapper">
+                        <button
+                          class="btn btn-action"
+                          id="applyLabelBtn"
+                          onclick="
+                            GmailCleaner.Labels.showApplyLabelDropdown(event)
+                          "
+                          disabled
+                        >
+                          <svg viewBox="0 0 24 24" width="16" height="16">
+                            <path
+                              fill="currentColor"
+                              d="M17.63 5.84C17.27 5.33 16.67 5 16 5L5 5.01C3.9 5.01 3 5.9 3 7v10c0 1.1.9 1.99 2 1.99L16 19c.67 0 1.27-.33 1.63-.84L22 12l-4.37-6.16z"
+                            />
+                          </svg>
+                          Label
+                        </button>
+                        <div
+                          class="label-dropdown"
+                          id="applyLabelDropdown"
+                        ></div>
+                      </div>
+                      <button
+                        class="btn btn-action"
+                        id="archiveBtn"
+                        onclick="GmailCleaner.Labels.archiveSelected()"
+                        disabled
+                      >
+                        <svg viewBox="0 0 24 24" width="16" height="16">
+                          <path
+                            fill="currentColor"
+                            d="M20.54 5.23l-1.39-1.68C18.88 3.21 18.47 3 18 3H6c-.47 0-.88.21-1.16.55L3.46 5.23C3.17 5.57 3 6.02 3 6.5V19c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6.5c0-.48-.17-.93-.46-1.27zM12 17.5L6.5 12H10v-2h4v2h3.5L12 17.5zM5.12 5l.81-1h12l.94 1H5.12z"
+                          />
+                        </svg>
+                        Archive
+                      </button>
+                      <button
+                        class="btn btn-action btn-important-action"
+                        id="importantBtn"
+                        onclick="GmailCleaner.Labels.markImportantSelected()"
+                        disabled
+                      >
+                        <svg viewBox="0 0 24 24" width="16" height="16">
+                          <path
+                            fill="currentColor"
+                            d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"
+                          />
+                        </svg>
+                        Important
+                      </button>
+                    </div>
+                    <div class="action-divider"></div>
+                    <div class="action-group">
+                      <span class="action-group-label">Export:</span>
+                      <button
+                        class="btn btn-action btn-download-action"
+                        id="downloadBtn"
+                        onclick="downloadSelectedEmails()"
+                        disabled
+                      >
+                        <svg viewBox="0 0 24 24" width="16" height="16">
+                          <path
+                            fill="currentColor"
+                            d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"
+                          />
+                        </svg>
+                        Download
+                      </button>
+                    </div>
+                    <div class="action-divider"></div>
+                    <div class="action-group">
+                      <span class="action-group-label">Delete:</span>
+                      <button
+                        class="btn btn-action btn-delete-action"
+                        id="deleteSelectedBtn"
+                        onclick="deleteSelectedSenders()"
+                        disabled
+                      >
+                        <svg viewBox="0 0 24 24" width="16" height="16">
+                          <path
+                            fill="currentColor"
+                            d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
+                          />
+                        </svg>
+                        Delete all selected emails
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Delete Progress Card -->
+              <div class="card hidden" id="deleteProgressCard">
+                <div class="card-body">
+                  <div class="progress-container">
+                    <div class="progress-bar" id="deleteProgressBar"></div>
+                  </div>
+                  <p class="progress-text" id="deleteProgressText">
+                    Starting...
+                  </p>
+                </div>
+              </div>
+
+              <!-- Delete Results Section -->
+              <div class="hidden" id="deleteResultsSection">
+                <div class="toolbar">
+                  <div class="toolbar-left">
+                    <label class="checkbox-wrapper">
+                      <input
+                        type="checkbox"
+                        id="deleteSelectAll"
+                        onchange="toggleDeleteSelectAll()"
+                      />
+                      <span class="checkmark"></span>
+                    </label>
+                    <span class="results-count"
+                      ><span id="deleteSendersBadge">0</span> senders
+                      found</span
+                    >
+                    <div class="sort-btn-group">
+                      <button
+                        class="sort-btn active"
+                        id="deleteSortDateBtn"
+                        onclick="toggleDeleteSortBy('date')"
+                        title="Sort by date"
+                      >
+                        <span>Date</span>
+                        <span
+                          class="sort-indicator sort-desc"
+                          id="deleteSortDateIndicator"
+                        >
+                          <svg viewBox="0 0 24 24" width="14" height="14">
+                            <path fill="currentColor" d="M7 10l5 5 5-5H7z" />
+                          </svg>
+                        </span>
+                      </button>
+                      <button
+                        class="sort-btn"
+                        id="deleteSortCountBtn"
+                        onclick="toggleDeleteSortBy('count')"
+                        title="Sort by email count"
+                      >
+                        <span>Count</span>
+                        <span
+                          class="sort-indicator sort-desc"
+                          id="deleteSortCountIndicator"
+                          style="visibility: hidden"
+                        >
+                          <svg viewBox="0 0 24 24" width="14" height="14">
+                            <path fill="currentColor" d="M7 10l5 5 5-5H7z" />
+                          </svg>
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                  <div class="toolbar-right">
+                    <div class="toggle-wrapper group-toggle">
+                      <span>Group by Domain</span>
+                      <label class="toggle-switch">
+                        <input
+                          type="checkbox"
+                          id="groupByDomainToggle"
+                          onchange="GmailCleaner.Delete.toggleGroupByDomain()"
+                        />
+                        <span class="toggle-slider"></span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="results-list" id="deleteResultsList">
+                  <!-- Filled by JavaScript -->
+                </div>
+              </div>
+
+              <div class="empty-state" id="deleteNoResults">
+                <div class="empty-icon">
+                  <svg viewBox="0 0 24 24" width="80" height="80">
+                    <path
+                      fill="#dadce0"
+                      d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"
+                    />
+                  </svg>
+                </div>
+                <h2>Scan to find email senders</h2>
+                <p>
+                  We'll show you who's sending you the most emails so you can
+                  delete them in bulk
+                </p>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <!-- Recipients Scan Spinner Overlay -->
+    <div class="recipients-scan-overlay hidden" id="recipientsScanOverlay">
+      <div class="recipients-scan-content">
+        <div class="spinner-large"></div>
+        <p id="recipientsScanMessage">
+          Compiling list of previous recipients from sent mail...
+        </p>
+      </div>
+    </div>
+
+    <!-- Valid Senders List Modal -->
+    <div class="modal-overlay hidden" id="validSendersModal">
+      <div class="modal-dialog reference-modal">
+        <div class="modal-header">
+          <h3>Valid Senders</h3>
+          <button
+            class="modal-close"
+            onclick="GmailCleaner.Delete.closeValidSendersModal()"
+          >
+            <svg viewBox="0 0 24 24" width="24" height="24">
+              <path
+                fill="currentColor"
+                d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
+              />
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted">
+            Senders you've marked as valid will not be deleted.
+          </p>
+          <div class="reference-list" id="validSendersList">
+            <!-- Filled by JavaScript -->
+          </div>
+          <div class="empty-state small hidden" id="validSendersEmpty">
+            <p>No valid senders added yet.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Known Recipients List Modal -->
+    <div class="modal-overlay hidden" id="knownRecipientsModal">
+      <div class="modal-dialog reference-modal">
+        <div class="modal-header">
+          <h3>Known Recipients</h3>
+          <button
+            class="modal-close"
+            onclick="GmailCleaner.Delete.closeKnownRecipientsModal()"
+          >
+            <svg viewBox="0 0 24 24" width="24" height="24">
+              <path
+                fill="currentColor"
+                d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
+              />
+            </svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted">
+            People you've sent email to. Emails from these senders won't be
+            deleted.
+          </p>
+          <div class="reference-list" id="knownRecipientsList">
+            <!-- Filled by JavaScript -->
+          </div>
+          <div class="empty-state small hidden" id="knownRecipientsEmpty">
+            <p>
+              No recipients found. Click "Scan Senders" to scan your sent mail.
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Modular JavaScript (cache-busted) -->
@@ -715,5 +1165,5 @@
     <script src="/static/js/unread.js?v={{ cache_bust }}"></script>
     <!-- Litepicker Date Range Picker Library -->
     <script src="https://cdn.jsdelivr.net/npm/litepicker@latest/dist/litepicker.js"></script>
-</body>
+  </body>
 </html>
