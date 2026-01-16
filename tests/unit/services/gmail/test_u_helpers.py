@@ -6,6 +6,7 @@ Tests for app/services/gmail/helpers.py
 
 from app.services.gmail.helpers import (
     build_gmail_query,
+    extract_original_email_from_apple_relay,
     extract_real_domain_from_apple_relay,
     get_recipients_from_headers,
     get_registrable_domain,
@@ -513,3 +514,60 @@ class TestExtractRealDomainFromAppleRelay:
         """Plus addressing in original local part should work."""
         email = "marc+lists_at_sniff_es_rxp672bm21a2k4_d15g0895@icloud.com"
         assert extract_real_domain_from_apple_relay(email) == "sniff.es"
+
+
+class TestExtractOriginalEmailFromAppleRelay:
+    """Tests for extract_original_email_from_apple_relay function."""
+
+    def test_simple_email(self):
+        """Simple email without subdomain."""
+        email = "noreply_at_skool_com_qrt2f0b6834fxp_j3af7012@icloud.com"
+        assert extract_original_email_from_apple_relay(email) == "noreply@skool.com"
+
+    def test_email_with_subdomain(self):
+        """Email with subdomain should preserve it."""
+        email = "noreply_at_notifs_skool_com_qrtb88b68d94xp_j0bf7012@icloud.com"
+        assert (
+            extract_original_email_from_apple_relay(email) == "noreply@notifs.skool.com"
+        )
+
+    def test_email_with_multiple_subdomains(self):
+        """Email with multiple subdomains should preserve them."""
+        email = "support_at_mailer_alpaca_markets_r6601abwwf71rc@icloud.com"
+        assert (
+            extract_original_email_from_apple_relay(email)
+            == "support@mailer.alpaca.markets"
+        )
+
+    def test_privaterelay_domain(self):
+        """Should work with privaterelay.appleid.com domain."""
+        email = "notification_at_kickstarter_com_f5s7hcm_58cd@privaterelay.appleid.com"
+        assert (
+            extract_original_email_from_apple_relay(email)
+            == "notification@kickstarter.com"
+        )
+
+    def test_preserves_local_part_case(self):
+        """Should preserve the case of the local part."""
+        email = "NoReply_at_example_com_hash123@icloud.com"
+        assert extract_original_email_from_apple_relay(email) == "NoReply@example.com"
+
+    def test_regular_email_returns_none(self):
+        """Regular email should return None."""
+        assert extract_original_email_from_apple_relay("user@example.com") is None
+
+    def test_regular_icloud_email_returns_none(self):
+        """Regular iCloud email without _at_ encoding should return None."""
+        assert extract_original_email_from_apple_relay("user@icloud.com") is None
+
+    def test_plus_addressing_preserved(self):
+        """Plus addressing in local part should be preserved."""
+        email = "marc+lists_at_sniff_es_rxp672bm21a2k4_d15g0895@icloud.com"
+        assert extract_original_email_from_apple_relay(email) == "marc+lists@sniff.es"
+
+    def test_newer_gtld(self):
+        """Newer gTLDs like .markets should work."""
+        email = "support_at_alpaca_markets_r6601abwwf71rc@icloud.com"
+        assert (
+            extract_original_email_from_apple_relay(email) == "support@alpaca.markets"
+        )

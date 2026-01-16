@@ -21,6 +21,7 @@ from app.services.auth import get_gmail_service
 from app.services.gmail.helpers import (
     build_gmail_query,
     build_delete_scan_query,
+    extract_original_email_from_apple_relay,
     extract_real_domain_from_apple_relay,
     get_recipients_from_headers,
     get_sender_info,
@@ -219,17 +220,23 @@ def scan_senders_for_delete(limit: int = 0, filters: Optional[dict] = None):
                 if len(sender_counts[sender_email]["subjects"]) < 3:
                     sender_counts[sender_email]["subjects"].append(subject)
 
-                # Extract domain from sender email
+                # Extract domain and display email from sender
                 # Check for Apple privacy relay addresses first
                 real_domain = extract_real_domain_from_apple_relay(sender_email)
+                original_email = extract_original_email_from_apple_relay(sender_email)
                 if real_domain:
                     domain = real_domain
+                    # Use original email for display if available
+                    sender_counts[sender_email]["display_email"] = (
+                        original_email or sender_email
+                    )
                 else:
                     domain = (
                         sender_email.split("@")[-1].lower()
                         if "@" in sender_email
                         else sender_email
                     )
+                    sender_counts[sender_email]["display_email"] = sender_email
                 sender_counts[sender_email]["domain"] = domain
 
                 # Extract recipients from To header
@@ -967,17 +974,23 @@ def scan_unknown_senders_for_delete(limit: int = 1000, filters: Optional[dict] =
                 if len(sender_counts[sender_email]["subjects"]) < 3:
                     sender_counts[sender_email]["subjects"].append(subject)
 
-                # Extract domain from sender email
+                # Extract domain and display email from sender
                 # Check for Apple privacy relay addresses first
                 real_domain = extract_real_domain_from_apple_relay(sender_email)
+                original_email = extract_original_email_from_apple_relay(sender_email)
                 if real_domain:
                     domain = real_domain
+                    # Use original email for display if available
+                    sender_counts[sender_email]["display_email"] = (
+                        original_email or sender_email
+                    )
                 else:
                     domain = (
                         sender_email.split("@")[-1].lower()
                         if "@" in sender_email
                         else sender_email
                     )
+                    sender_counts[sender_email]["display_email"] = sender_email
                 sender_counts[sender_email]["domain"] = domain
 
                 # Extract recipients from To header

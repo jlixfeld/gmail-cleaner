@@ -48,6 +48,59 @@ def get_registrable_domain(domain: str) -> str:
     return ".".join(parts[-2:])
 
 
+def _parse_apple_relay_email(email: str) -> tuple[str, str, int] | None:
+    """Parse Apple privacy relay email to extract local part, domain segments, and TLD end index.
+
+    Internal helper for extract_real_domain_from_apple_relay and
+    extract_original_email_from_apple_relay.
+
+    Args:
+        email: Email address to parse
+
+    Returns:
+        Tuple of (local_part, domain_with_subdomains, tld_end_index) or None if not Apple relay
+    """
+    relay_domains = ("icloud.com", "privaterelay.appleid.com")
+
+    if "@" not in email:
+        return None
+
+    local, domain = email.rsplit("@", 1)
+    if domain.lower() not in relay_domains:
+        return None
+
+    # Pattern: {localpart}_at_{domain}_{hash}
+    if "_at_" not in local.lower():
+        return None
+
+    # Split on "_at_" preserving original case for local part
+    at_idx = local.lower().index("_at_")
+    original_local = local[:at_idx]
+    domain_part = local[at_idx + 4 :]  # Skip "_at_"
+    segments = domain_part.split("_")
+
+    # Try progressively longer domain candidates using tldextract
+    best_match_end = -1
+    best_fqdn = None
+    for end in range(1, len(segments) + 1):
+        candidate = ".".join(segments[:end])
+        result = tldextract.extract(candidate)
+
+        # Check if this forms a valid domain with a known TLD
+        if result.suffix and result.domain:
+            best_match_end = end
+            # Build full domain including subdomains
+            if result.subdomain:
+                best_fqdn = f"{result.subdomain}.{result.domain}.{result.suffix}"
+            else:
+                best_fqdn = f"{result.domain}.{result.suffix}"
+
+    if best_fqdn is None:
+        return None
+
+    return (original_local, best_fqdn, best_match_end)
+
+
 def extract_real_domain_from_apple_relay(email: str) -> str | None:
     """Extract real sender domain from Apple privacy relay addresses.
 
@@ -83,41 +136,49 @@ def extract_real_domain_from_apple_relay(email: str) -> str | None:
         >>> extract_real_domain_from_apple_relay("user@example.com")
         # Returns None
     """
-    relay_domains = ("icloud.com", "privaterelay.appleid.com")
-
-    if "@" not in email:
+    parsed = _parse_apple_relay_email(email)
+    if parsed is None:
         return None
 
-    local, domain = email.rsplit("@", 1)
-    if domain.lower() not in relay_domains:
+    _local, fqdn, _end = parsed
+    # Return registrable domain (strip subdomains)
+    return get_registrable_domain(fqdn)
+
+
+def extract_original_email_from_apple_relay(email: str) -> str | None:
+    """Extract original sender email from Apple privacy relay addresses.
+
+    Reconstructs the full original email address including subdomains.
+    Use this when displaying sender information to users.
+
+    Args:
+        email: Apple relay email address
+
+    Returns:
+        Original email address or None if not an Apple relay
+
+    Examples:
+        >>> extract_original_email_from_apple_relay(
+        ...     "noreply_at_skool_com_qrt2f0b6834fxp_j3af7012@icloud.com"
+        ... )
+        'noreply@skool.com'
+        >>> extract_original_email_from_apple_relay(
+        ...     "noreply_at_notifs_skool_com_qrtb88b68d94xp_j0bf7012@icloud.com"
+        ... )
+        'noreply@notifs.skool.com'
+        >>> extract_original_email_from_apple_relay(
+        ...     "support_at_mailer_alpaca_markets_r6601abwwf71rc@icloud.com"
+        ... )
+        'support@mailer.alpaca.markets'
+        >>> extract_original_email_from_apple_relay("user@example.com")
+        # Returns None
+    """
+    parsed = _parse_apple_relay_email(email)
+    if parsed is None:
         return None
 
-    # Pattern: {localpart}_at_{domain}_{hash}
-    if "_at_" not in local.lower():
-        return None
-
-    # Split on "_at_" and take everything after
-    parts = local.lower().split("_at_", 1)
-    if len(parts) < 2:
-        return None
-
-    # domain_hash part: "mailer_alpaca_markets_r6601abwwf71rc_4a4d9051"
-    # or "kickstarter_com_f5s7hcm6d6y2x2_58cd0895"
-    domain_part = parts[1]
-    segments = domain_part.split("_")
-
-    # Try progressively longer domain candidates
-    # tldextract validates TLDs against the Public Suffix List
-    best_match = None
-    for end in range(1, len(segments) + 1):
-        candidate = ".".join(segments[:end])
-        result = tldextract.extract(candidate)
-
-        # Check if this forms a valid domain with a known TLD
-        if result.suffix and result.domain:
-            best_match = result.top_domain_under_public_suffix
-
-    return best_match
+    local_part, fqdn, _end = parsed
+    return f"{local_part}@{fqdn}"
 
 
 def sanitize_gmail_query_value(value: str) -> str:

@@ -1031,7 +1031,7 @@ GmailCleaner.Delete = {
                 </div>
                 <div class="result-content">
                     <div class="sender-recipient-row">
-                        <span class="result-sender">${GmailCleaner.UI.escapeHtml(sender.email)}</span>
+                        <span class="result-sender">${GmailCleaner.UI.escapeHtml(sender.display_email || sender.email)}</span>
                         ${recipientsHtml}
                     </div>
                     ${subjectInline}
