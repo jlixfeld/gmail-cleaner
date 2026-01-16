@@ -7,8 +7,148 @@ Shared utility functions: security, filters, and email parsing.
 import re
 import socket
 import ipaddress
+from email.utils import getaddresses, parseaddr
 from urllib.parse import urlparse
 from typing import Optional, Union, Any
+
+
+# Common compound TLDs that need 3 parts (e.g., amazon.co.uk)
+COMPOUND_TLDS = {"co.uk", "com.au", "co.nz", "co.jp", "co.kr", "com.br", "com.mx"}
+
+
+def get_registrable_domain(domain: str) -> str:
+    """Extract registrable domain, stripping subdomains.
+
+    Args:
+        domain: Full domain with potential subdomains (e.g., mail.example.com)
+
+    Returns:
+        Registrable domain (e.g., example.com, amazon.co.uk)
+
+    Examples:
+        >>> get_registrable_domain("e.fiverr.com")
+        'fiverr.com'
+        >>> get_registrable_domain("mail.amazon.co.uk")
+        'amazon.co.uk'
+        >>> get_registrable_domain("example.com")
+        'example.com'
+    """
+    parts = domain.lower().split(".")
+    if len(parts) <= 2:
+        return domain.lower()
+
+    # Check for compound TLDs
+    last_two = ".".join(parts[-2:])
+    if last_two in COMPOUND_TLDS:
+        return ".".join(parts[-3:]) if len(parts) >= 3 else domain.lower()
+
+    # Standard TLD: take last 2 parts
+    return ".".join(parts[-2:])
+
+
+def extract_real_domain_from_apple_relay(email: str) -> str | None:
+    """Extract real sender domain from Apple privacy relay addresses.
+
+    Apple's privacy relay services (Hide My Email, Sign in with Apple) encode
+    the original sender's email in the local part using `_at_` as a separator.
+
+    Handles:
+    - Hide My Email: xxx_at_domain_com_hash@icloud.com
+    - Sign in with Apple: xxx_at_domain_com_hash@privaterelay.appleid.com
+
+    Args:
+        email: Email address to check
+
+    Returns:
+        Registrable domain (no subdomains) or None if not an Apple relay
+
+    Examples:
+        >>> extract_real_domain_from_apple_relay(
+        ...     "notification_at_kickstarter_com_f5s7hcm_58cd@icloud.com"
+        ... )
+        'kickstarter.com'
+        >>> extract_real_domain_from_apple_relay(
+        ...     "noreply_at_e_fiverr_com_z4gur7mrhh_4fe6f996@privaterelay.appleid.com"
+        ... )
+        'fiverr.com'
+        >>> extract_real_domain_from_apple_relay("user@example.com")
+        # Returns None
+    """
+    relay_domains = ("icloud.com", "privaterelay.appleid.com")
+
+    if "@" not in email:
+        return None
+
+    local, domain = email.rsplit("@", 1)
+    if domain.lower() not in relay_domains:
+        return None
+
+    # Pattern: {localpart}_at_{domain}_{hash}
+    if "_at_" not in local.lower():
+        return None
+
+    # Split on "_at_" and take everything after
+    parts = local.lower().split("_at_", 1)
+    if len(parts) < 2:
+        return None
+
+    # domain_hash part: "e_fiverr_com_z4gur7mrhh_4fe6f996"
+    # or "kickstarter_com_f5s7hcm6d6y2x2_58cd0895"
+    domain_part = parts[1]
+    segments = domain_part.split("_")
+
+    # Known TLDs to identify where the domain ends
+    known_tlds = {
+        "com",
+        "net",
+        "org",
+        "io",
+        "co",
+        "uk",
+        "ca",
+        "de",
+        "fr",
+        "au",
+        "jp",
+        "kr",
+        "br",
+        "mx",
+        "nz",
+        "edu",
+        "gov",
+        "mil",
+        "info",
+        "biz",
+        "us",
+        "tv",
+        "me",
+        "app",
+        "dev",
+        "ai",
+        "cloud",
+        "tech",
+        "online",
+        "store",
+        "shop",
+    }
+
+    # Find the last known TLD in the segments - that marks the end of the domain
+    tld_index = -1
+    for i, seg in enumerate(segments):
+        if seg in known_tlds:
+            tld_index = i
+
+    if tld_index == -1:
+        return None
+
+    # Take segments up to and including the TLD
+    domain_segments = segments[: tld_index + 1]
+
+    if domain_segments:
+        full_domain = ".".join(domain_segments)
+        return get_registrable_domain(full_domain)
+
+    return None
 
 
 def sanitize_gmail_query_value(value: str) -> str:
@@ -171,6 +311,25 @@ def build_gmail_query(filters: Optional[Union[dict, Any]] = None) -> str:
     return " ".join(query_parts)
 
 
+def build_delete_scan_query(filters: Optional[Union[dict, Any]] = None) -> str:
+    """Build Gmail search query for delete scan with default exclusions.
+
+    Excludes sent, trash, and spam folders by default.
+
+    **Args:**
+        - `filters`: Optional dict with filter parameters (same as build_gmail_query)
+
+    **Returns:**
+        Gmail query string with default exclusions
+    """
+    base_query = build_gmail_query(filters)
+    exclusions = "-in:sent -in:trash -in:spam"
+
+    if base_query:
+        return f"{base_query} {exclusions}"
+    return exclusions
+
+
 def get_unsubscribe_from_headers(headers: list) -> tuple[Optional[str], Optional[str]]:
     """Extract unsubscribe link from email headers."""
     for header in headers:
@@ -199,16 +358,27 @@ def get_unsubscribe_from_headers(headers: list) -> tuple[Optional[str], Optional
 
 
 def get_sender_info(headers: list) -> tuple[str, str]:
-    """Extract sender name and email from headers."""
+    """Extract sender name and email from headers.
+
+    Uses Python's email.utils.parseaddr for RFC 2822 compliant parsing.
+    Handles formats like:
+    - "Name" <email@domain.com>
+    - email@domain.com (Name)
+    - email@domain.com
+
+    Args:
+        headers: List of email header dicts with 'name' and 'value' keys
+
+    Returns:
+        Tuple of (display_name, email_address)
+    """
     for header in headers:
         if header["name"].lower() == "from":
-            from_value = header["value"]
-            match = re.search(r"([^<]*)<([^>]+)>", from_value)
-            if match:
-                name = match.group(1).strip().strip('"')
-                email = match.group(2).strip()
+            name, email = parseaddr(header["value"])
+            if email:
                 return name or email, email
-            return from_value, from_value
+            # Fallback if parseaddr couldn't extract email
+            return header["value"], header["value"]
     return "Unknown", "unknown"
 
 
@@ -223,6 +393,12 @@ def get_subject(headers: list) -> str:
 def get_recipients_from_headers(headers: list) -> set[str]:
     """Extract recipient email addresses from To, Cc, Bcc headers.
 
+    Uses Python's email.utils.getaddresses for RFC 2822 compliant parsing.
+    Handles formats like:
+    - "Name" <email@domain.com>, other@domain.com
+    - email@domain.com (Name)
+    - Multiple comma-separated addresses
+
     Args:
         headers: List of email header dicts with 'name' and 'value' keys
 
@@ -230,12 +406,14 @@ def get_recipients_from_headers(headers: list) -> set[str]:
         Set of lowercase email addresses from To/Cc/Bcc fields
     """
     recipients: set[str] = set()
+    header_values = []
     for header in headers:
         if header["name"].lower() in ("to", "cc", "bcc"):
-            # Find all email addresses in the header value
-            # Handles formats like: "Name <email@domain.com>, other@domain.com"
-            emails = re.findall(r"[\w\.\-\+]+@[\w\.\-]+\.\w+", header["value"])
-            recipients.update(e.lower() for e in emails)
+            header_values.append(header["value"])
+
+    for _name, email in getaddresses(header_values):
+        if email:
+            recipients.add(email.lower())
     return recipients
 
 

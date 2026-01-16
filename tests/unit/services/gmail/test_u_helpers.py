@@ -6,7 +6,9 @@ Tests for app/services/gmail/helpers.py
 
 from app.services.gmail.helpers import (
     build_gmail_query,
+    extract_real_domain_from_apple_relay,
     get_recipients_from_headers,
+    get_registrable_domain,
     get_sender_info,
     get_subject,
     sanitize_gmail_query_value,
@@ -91,6 +93,26 @@ class TestGetSenderInfo:
         headers = [{"name": "From", "value": "  Display Name  <email@domain.com>"}]
         name, email = get_sender_info(headers)
         assert name == "Display Name"
+        assert email == "email@domain.com"
+
+    def test_comment_format(self):
+        """Email with comment format: email@domain.com (Name)"""
+        headers = [{"name": "From", "value": "email@domain.com (Display Name)"}]
+        name, email = get_sender_info(headers)
+        assert email == "email@domain.com"
+        # Name extraction from comment format
+        assert name == "Display Name"
+
+    def test_email_with_trailing_whitespace(self):
+        """Email with trailing whitespace should be handled."""
+        headers = [{"name": "From", "value": "email@domain.com "}]
+        name, email = get_sender_info(headers)
+        assert email == "email@domain.com"
+
+    def test_email_with_leading_whitespace(self):
+        """Email with leading whitespace should be handled."""
+        headers = [{"name": "From", "value": " email@domain.com"}]
+        name, email = get_sender_info(headers)
         assert email == "email@domain.com"
 
 
@@ -211,6 +233,29 @@ class TestGetRecipientsFromHeaders:
         ]
         result = get_recipients_from_headers(headers)
         assert result == {"to@example.com", "cc@example.com", "bcc@example.com"}
+
+    def test_comment_format(self):
+        """Recipients in comment format: email@domain.com (Name)"""
+        headers = [{"name": "To", "value": "recipient@example.com (Recipient Name)"}]
+        result = get_recipients_from_headers(headers)
+        assert result == {"recipient@example.com"}
+
+    def test_trailing_whitespace(self):
+        """Recipients with trailing whitespace should be handled."""
+        headers = [{"name": "To", "value": "recipient@example.com "}]
+        result = get_recipients_from_headers(headers)
+        assert result == {"recipient@example.com"}
+
+    def test_mixed_formats(self):
+        """Mix of different email formats in header."""
+        headers = [
+            {
+                "name": "To",
+                "value": '"Name" <a@x.com>, b@x.com (Bob), c@x.com',
+            }
+        ]
+        result = get_recipients_from_headers(headers)
+        assert result == {"a@x.com", "b@x.com", "c@x.com"}
 
 
 class TestBuildGmailQuery:
@@ -355,3 +400,91 @@ class TestSanitizeGmailQueryValue:
         """Various special characters should be handled."""
         result = sanitize_gmail_query_value("user+tag@example.com")
         assert result == '"user+tag@example.com"'
+
+
+class TestGetRegistrableDomain:
+    """Tests for get_registrable_domain function."""
+
+    def test_simple_domain(self):
+        """Simple domain should be returned as-is."""
+        assert get_registrable_domain("example.com") == "example.com"
+
+    def test_subdomain_stripped(self):
+        """Subdomain should be stripped."""
+        assert get_registrable_domain("mail.example.com") == "example.com"
+
+    def test_multiple_subdomains_stripped(self):
+        """Multiple subdomains should be stripped."""
+        assert get_registrable_domain("a.b.c.example.com") == "example.com"
+
+    def test_compound_tld_co_uk(self):
+        """Compound TLD .co.uk should keep 3 parts."""
+        assert get_registrable_domain("amazon.co.uk") == "amazon.co.uk"
+
+    def test_compound_tld_with_subdomain(self):
+        """Compound TLD with subdomain should strip subdomain only."""
+        assert get_registrable_domain("mail.amazon.co.uk") == "amazon.co.uk"
+
+    def test_compound_tld_com_au(self):
+        """Compound TLD .com.au should keep 3 parts."""
+        assert get_registrable_domain("shop.example.com.au") == "example.com.au"
+
+    def test_lowercase_conversion(self):
+        """Domain should be converted to lowercase."""
+        assert get_registrable_domain("Mail.EXAMPLE.COM") == "example.com"
+
+    def test_single_part_domain(self):
+        """Single part domain should be returned as-is."""
+        assert get_registrable_domain("localhost") == "localhost"
+
+
+class TestExtractRealDomainFromAppleRelay:
+    """Tests for extract_real_domain_from_apple_relay function."""
+
+    def test_hide_my_email_icloud(self):
+        """Hide My Email via iCloud should extract domain."""
+        email = "notification_at_kickstarter_com_f5s7hcm6d6y2x2_58cd0895@icloud.com"
+        assert extract_real_domain_from_apple_relay(email) == "kickstarter.com"
+
+    def test_sign_in_with_apple_privaterelay(self):
+        """Sign in with Apple privaterelay should extract domain."""
+        email = "noreply_at_e_fiverr_com_z4gur7mrhh_4fe6f996@privaterelay.appleid.com"
+        assert extract_real_domain_from_apple_relay(email) == "fiverr.com"
+
+    def test_subdomain_in_original_stripped(self):
+        """Subdomain in original sender should be stripped."""
+        email = "info_at_mail_example_com_abc12345@icloud.com"
+        assert extract_real_domain_from_apple_relay(email) == "example.com"
+
+    def test_compound_tld_preserved(self):
+        """Compound TLD should be preserved."""
+        email = "info_at_mail_amazon_co_uk_abc12345@icloud.com"
+        assert extract_real_domain_from_apple_relay(email) == "amazon.co.uk"
+
+    def test_regular_email_returns_none(self):
+        """Regular email (not Apple relay) should return None."""
+        assert extract_real_domain_from_apple_relay("user@example.com") is None
+
+    def test_regular_icloud_email_without_at_encoding(self):
+        """Regular iCloud email without _at_ encoding should return None."""
+        assert extract_real_domain_from_apple_relay("user@icloud.com") is None
+
+    def test_no_at_symbol_returns_none(self):
+        """Email without @ symbol should return None."""
+        assert extract_real_domain_from_apple_relay("invalid-email") is None
+
+    def test_case_insensitive_relay_domain(self):
+        """Relay domain check should be case insensitive."""
+        email = "test_at_example_com_abc12345@ICLOUD.COM"
+        assert extract_real_domain_from_apple_relay(email) == "example.com"
+
+    def test_short_hash_not_confused_with_domain(self):
+        """Short hex-like segments that are part of domain should not be cut."""
+        # e.g., domain like "abc123.com" should work
+        email = "user_at_abc123_com_deadbeef@icloud.com"
+        assert extract_real_domain_from_apple_relay(email) == "abc123.com"
+
+    def test_reply_address_format(self):
+        """Reply-To format with longer hash should work."""
+        email = "m06wql7oeowh9d2bc40d8eef3df20c04ffad2f32b3f21_at_reply_kickstarter_com_f7s3hdmddeycxc_52cd0895@icloud.com"
+        assert extract_real_domain_from_apple_relay(email) == "kickstarter.com"
