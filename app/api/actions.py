@@ -36,6 +36,8 @@ from app.models import (
     UnreadScanRequest,
     UnreadActionRequest,
     BuildKnownSendersRequest,
+    ValidSenderRequest,
+    RecipientOverrideRequest,
 )
 from app.services import (
     scan_emails,
@@ -61,6 +63,11 @@ from app.services import (
     delete_unread_by_senders_background,
     build_known_senders_cache,
     scan_unknown_senders_for_delete,
+    add_valid_sender,
+    remove_valid_sender,
+    scan_recipients_background,
+    add_recipient_override,
+    remove_recipient_override,
 )
 
 router = APIRouter(prefix="/api", tags=["Actions"])
@@ -414,3 +421,79 @@ async def api_delete_scan_unknown(
     filters_dict = body.filters.model_dump(exclude_none=True) if body.filters else None
     background_tasks.add_task(scan_unknown_senders_for_delete, body.limit, filters_dict)
     return {"status": "started"}
+
+
+# ----- Valid Senders & Recipients Endpoints -----
+
+
+@router.post("/valid-senders")
+@limiter.limit(ACTION_RATE_LIMIT)
+async def api_add_valid_sender(request: Request, body: ValidSenderRequest):
+    """Add a sender to the valid senders whitelist."""
+    try:
+        result = add_valid_sender(body.sender_email)
+        return result
+    except Exception as e:
+        logger.exception("Error adding valid sender")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to add valid sender",
+        ) from e
+
+
+@router.delete("/valid-senders")
+@limiter.limit(ACTION_RATE_LIMIT)
+async def api_remove_valid_sender(request: Request, body: ValidSenderRequest):
+    """Remove a sender from the valid senders whitelist."""
+    try:
+        result = remove_valid_sender(body.sender_email)
+        return result
+    except Exception as e:
+        logger.exception("Error removing valid sender")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to remove valid sender",
+        ) from e
+
+
+@router.post("/scan-recipients")
+@limiter.limit(HEAVY_OPERATION_RATE_LIMIT)
+async def api_scan_recipients(request: Request, background_tasks: BackgroundTasks):
+    """Scan sent mail and store recipients to database."""
+    background_tasks.add_task(scan_recipients_background)
+    return {"status": "started"}
+
+
+# ----- Recipient Overrides Endpoints -----
+
+
+@router.post("/recipient-overrides")
+@limiter.limit(ACTION_RATE_LIMIT)
+async def api_add_recipient_override(request: Request, body: RecipientOverrideRequest):
+    """Add a sender to the recipient overrides list (marks as deletable)."""
+    try:
+        result = add_recipient_override(body.sender_email)
+        return result
+    except Exception as e:
+        logger.exception("Error adding recipient override")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to add recipient override",
+        ) from e
+
+
+@router.delete("/recipient-overrides")
+@limiter.limit(ACTION_RATE_LIMIT)
+async def api_remove_recipient_override(
+    request: Request, body: RecipientOverrideRequest
+):
+    """Remove a sender from the recipient overrides list."""
+    try:
+        result = remove_recipient_override(body.sender_email)
+        return result
+    except Exception as e:
+        logger.exception("Error removing recipient override")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to remove recipient override",
+        ) from e

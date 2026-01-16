@@ -35,6 +35,10 @@ from app.services import (
     get_unread_scan_results,
     get_unread_action_status,
     get_known_senders_status,
+    get_valid_senders_list,
+    get_my_recipients_list,
+    get_recipients_scan_status,
+    get_recipient_overrides_list,
 )
 
 router = APIRouter(prefix="/api", tags=["Status"])
@@ -328,4 +332,63 @@ async def api_known_senders_status(request: Request):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get known senders status",
+        ) from e
+
+
+# ----- Valid Senders & Recipients Endpoints -----
+
+
+@router.get("/valid-senders")
+@limiter.limit(STATUS_RATE_LIMIT)
+async def api_get_valid_senders(request: Request):
+    """Get list of valid senders for current user."""
+    try:
+        return {"senders": get_valid_senders_list()}
+    except Exception as e:
+        logger.exception("Error getting valid senders")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get valid senders",
+        ) from e
+
+
+@router.get("/my-recipients")
+@limiter.limit(STATUS_RATE_LIMIT)
+async def api_get_my_recipients(request: Request):
+    """Get list of recipients from sent mail for current user."""
+    try:
+        return {"recipients": get_my_recipients_list()}
+    except Exception as e:
+        logger.exception("Error getting recipients")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get recipients",
+        ) from e
+
+
+@router.get("/recipients-scan-status")
+@limiter.limit(STATUS_RATE_LIMIT)
+async def api_recipients_scan_status(request: Request):
+    """Get recipients scan status."""
+    try:
+        return get_recipients_scan_status()
+    except Exception as e:
+        logger.exception("Error getting recipients scan status")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get recipients scan status",
+        ) from e
+
+
+@router.get("/recipient-overrides")
+@limiter.limit(STATUS_RATE_LIMIT)
+async def api_get_recipient_overrides(request: Request):
+    """Get list of recipient overrides for current user."""
+    try:
+        return {"overrides": get_recipient_overrides_list()}
+    except Exception as e:
+        logger.exception("Error getting recipient overrides")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get recipient overrides",
         ) from e

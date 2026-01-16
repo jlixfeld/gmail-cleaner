@@ -238,6 +238,22 @@ class BuildKnownSendersRequest(BaseModel):
     )
 
 
+class ValidSenderRequest(BaseModel):
+    """Request to add/remove a valid sender."""
+
+    sender_email: str = Field(
+        ..., min_length=1, description="Sender email address to add/remove"
+    )
+
+
+class RecipientOverrideRequest(BaseModel):
+    """Request to add/remove a recipient override."""
+
+    sender_email: str = Field(
+        ..., min_length=1, description="Sender email address to override"
+    )
+
+
 # ----- Response Models -----
 
 
@@ -284,3 +300,32 @@ class DeleteResponse(BaseModel):
     success: bool
     deleted: int = 0
     message: Optional[str] = None
+
+
+class ValidSenderResponse(BaseModel):
+    """Valid sender action response."""
+
+    success: bool
+    sender_email: str
+    is_valid: bool
+    error: Optional[str] = None
+
+
+class RecipientOverrideResponse(BaseModel):
+    """Recipient override action response."""
+
+    success: bool
+    sender_email: str
+    is_override: bool
+    error: Optional[str] = None
+
+
+class RecipientsScanStatusResponse(BaseModel):
+    """Recipients scan progress status response."""
+
+    progress: int = 0
+    message: str = "Ready"
+    done: bool = False
+    error: Optional[str] = None
+    recipient_count: int = 0
+    scanned_emails: int = 0
