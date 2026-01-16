@@ -129,10 +129,12 @@ class TestScanSendersForDelete:
 
         # Mock batch request to invoke callback with each message
         def mock_new_batch(callback):
+            """Create mock batch that invokes callback for each message."""
             batch = Mock()
             batch.add = Mock()
 
             def execute_batch():
+                """Execute batch by calling callback for each mock message."""
                 for i, msg in enumerate(mock_messages):
                     callback(str(i), msg, None)
 
@@ -210,10 +212,12 @@ class TestScanSendersForDelete:
         batch_idx = [0]
 
         def mock_new_batch(callback):
+            """Create mock batch that invokes callback for each message."""
             batch = Mock()
             batch.add = Mock()
 
             def execute_batch():
+                """Execute batch by processing messages in batches of 100."""
                 batch_size = 100
                 start = batch_idx[0]
                 end = min(start + batch_size, len(messages))
@@ -272,10 +276,12 @@ class TestScanSendersForDelete:
         ]
 
         def mock_new_batch(callback):
+            """Create mock batch that invokes callback for each message."""
             batch = Mock()
             batch.add = Mock()
 
             def execute_batch():
+                """Execute batch by calling callback for each mock message."""
                 for i, msg in enumerate(messages):
                     callback(str(i), msg, None)
 
@@ -315,10 +321,12 @@ class TestScanSendersForDelete:
         ]
 
         def mock_new_batch(callback):
+            """Create mock batch that invokes callback for each message."""
             batch = Mock()
             batch.add = Mock()
 
             def execute_batch():
+                """Execute batch by calling callback for each mock message."""
                 for i, msg in enumerate(messages):
                     callback(str(i), msg, None)
 
@@ -365,10 +373,12 @@ class TestScanSendersForDelete:
         ]
 
         def mock_new_batch(callback):
+            """Create mock batch that invokes callback for each message."""
             batch = Mock()
             batch.add = Mock()
 
             def execute_batch():
+                """Execute batch by calling callback for each mock message."""
                 for i, msg in enumerate(messages):
                     callback(str(i), msg, None)
 
@@ -415,10 +425,12 @@ class TestScanSendersForDelete:
         ]
 
         def mock_new_batch(callback):
+            """Create mock batch that invokes callback for each message."""
             batch = Mock()
             batch.add = Mock()
 
             def execute_batch():
+                """Execute batch by calling callback for each mock message."""
                 for i, msg in enumerate(messages):
                     callback(str(i), msg, None)
 
@@ -460,10 +472,12 @@ class TestScanSendersForDelete:
         ]
 
         def mock_new_batch(callback):
+            """Create mock batch that invokes callback for each message."""
             batch = Mock()
             batch.add = Mock()
 
             def execute_batch():
+                """Execute batch by calling callback for each mock message."""
                 for i, msg in enumerate(messages):
                     callback(str(i), msg, None)
 

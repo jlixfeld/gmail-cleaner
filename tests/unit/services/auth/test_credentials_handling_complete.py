@@ -29,6 +29,7 @@ class TestCredentialsFromEnvironmentVariable:
         mock_settings.credentials_file = "credentials.json"
 
         def exists_side_effect(path):
+            """Return False for all paths (no files exist)."""
             if "credentials.json" in str(path):
                 return False
             return False
@@ -110,6 +111,7 @@ class TestCredentialsFilePrecedence:
         mock_settings.credentials_file = "credentials.json"
 
         def exists_side_effect(path):
+            """Return True for credentials.json, False otherwise."""
             if "credentials.json" in str(path):
                 return True
             return False
@@ -141,6 +143,7 @@ class TestCredentialsValidation:
         mock_settings.oauth_host = "localhost"
 
         def exists_side_effect(path):
+            """Return True for credentials.json, False for token.json."""
             if "token.json" in str(path):
                 return False
             if "credentials.json" in str(path):
@@ -176,6 +179,7 @@ class TestCredentialsValidation:
         mock_settings.oauth_host = "localhost"
 
         def exists_side_effect(path):
+            """Return True for credentials.json, False for token.json."""
             if "token.json" in str(path):
                 return False
             if "credentials.json" in str(path):
@@ -209,6 +213,7 @@ class TestCredentialsValidation:
         mock_settings.oauth_host = "localhost"
 
         def exists_side_effect(path):
+            """Return True for credentials.json, False for token.json."""
             if "token.json" in str(path):
                 return False
             if "credentials.json" in str(path):
@@ -246,6 +251,7 @@ class TestCredentialsFilePermissions:
         mock_settings.scopes = ["scope1", "scope2"]
 
         def exists_side_effect(path):
+            """Return True for credentials.json, False for token.json."""
             if "token.json" in str(path):
                 return False
             if "credentials.json" in str(path):
@@ -290,6 +296,7 @@ class TestCredentialsTypeMismatch:
         mock_settings.oauth_host = "localhost"
 
         def exists_side_effect(path):
+            """Return True for credentials.json, False for token.json."""
             if "token.json" in str(path):
                 return False
             if "credentials.json" in str(path):
@@ -329,6 +336,7 @@ class TestCredentialsTypeMismatch:
         mock_settings.oauth_host = "localhost"
 
         def exists_side_effect(path):
+            """Return True for credentials.json, False for token.json."""
             if "token.json" in str(path):
                 return False
             if "credentials.json" in str(path):

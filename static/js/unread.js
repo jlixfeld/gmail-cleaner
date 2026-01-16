@@ -4,6 +4,10 @@
 
 window.GmailCleaner = window.GmailCleaner || {};
 
+/**
+ * Unread Emails Module - scans and manages unread emails by sender.
+ * Supports mark-read, archive, and delete operations.
+ */
 GmailCleaner.Unread = {
     scanning: false,
     results: [],
@@ -11,11 +15,13 @@ GmailCleaner.Unread = {
     displayLimit: 20,
     MAX_POLL_RETRIES: 10,
 
+    /** Returns true if user should be prompted for confirmation. */
     shouldConfirm() {
         const skipCheckbox = document.getElementById('unreadSkipConfirm');
         return !skipCheckbox || !skipCheckbox.checked;
     },
 
+    /** Updates display limit from dropdown and re-renders results. */
     changeDisplayLimit() {
         const select = document.getElementById('unreadDisplayLimit');
         if (select) {
@@ -24,6 +30,10 @@ GmailCleaner.Unread = {
         }
     },
 
+    /**
+     * Formats date range as "MM/DD/YYYY to MM/DD/YYYY".
+     * @returns {string} Formatted date range or empty string if invalid.
+     */
     formatDateRange(firstDate, lastDate) {
         const formatDate = (dateStr) => {
             try {
@@ -54,11 +64,13 @@ GmailCleaner.Unread = {
         }
     },
 
+    /** Toggles between inbox-only and all-folders scan scope. */
     toggleScope() {
         this.inboxOnly = !this.inboxOnly;
         this.updateScopeToggle();
     },
 
+    /** Updates scope toggle UI to reflect current setting. */
     updateScopeToggle() {
         const toggle = document.getElementById('unreadScopeToggle');
         const label = document.getElementById('unreadScopeLabel');
@@ -66,6 +78,7 @@ GmailCleaner.Unread = {
         if (label) label.textContent = this.inboxOnly ? 'Inbox only' : 'All folders';
     },
 
+    /** Starts unread email scan with current filters and scope. */
     async startScan() {
         if (this.scanning) return;
 
@@ -118,6 +131,7 @@ GmailCleaner.Unread = {
         }
     },
 
+    /** Polls scan progress and fetches results when complete. */
     async pollProgress(retryCount = 0) {
         try {
             const response = await fetch('/api/unread-scan-status');
@@ -151,6 +165,7 @@ GmailCleaner.Unread = {
         }
     },
 
+    /** Resets scan button to default state. */
     resetScan() {
         this.scanning = false;
         const scanBtn = document.getElementById('unreadScanBtn');
@@ -163,6 +178,7 @@ GmailCleaner.Unread = {
         `;
     },
 
+    /** Renders unread results list with action buttons for each sender. */
     displayResults() {
         const resultsList = document.getElementById('unreadResultsList');
         const resultsSection = document.getElementById('unreadResultsSection');
@@ -228,6 +244,7 @@ GmailCleaner.Unread = {
         });
     },
 
+    /** Enables or disables bulk action buttons. */
     setActionButtonsEnabled(enabled) {
         const buttons = [
             'unreadMarkReadBtn',
@@ -243,6 +260,7 @@ GmailCleaner.Unread = {
         });
     },
 
+    /** Toggles all result checkboxes based on select-all state. */
     toggleSelectAll() {
         const selectAll = document.getElementById('unreadSelectAll');
         document.querySelectorAll('.unread-cb').forEach(cb => {
@@ -250,22 +268,27 @@ GmailCleaner.Unread = {
         });
     },
 
+    /** Marks all emails from a sender as read. */
     async markReadSender(index) {
         await this.processSingleSender(index, '/api/unread-mark-read', 'Mark as read');
     },
 
+    /** Marks all emails from a sender as read and archives them. */
     async markReadAndArchiveSender(index) {
         await this.processSingleSender(index, '/api/unread-mark-read-archive', 'Mark as read and archive');
     },
 
+    /** Archives all emails from a sender. */
     async archiveSender(index) {
         await this.processSingleSender(index, '/api/unread-archive', 'Archive');
     },
 
+    /** Deletes all emails from a sender. */
     async deleteSender(index) {
         await this.processSingleSender(index, '/api/unread-delete', 'Delete');
     },
 
+    /** Processes a single sender with the specified API endpoint. */
     async processSingleSender(index, endpoint, actionName) {
         const r = this.results[index];
         const buttons = document.querySelectorAll(`#unreadResultsList .result-item:nth-child(${index + 1}) .result-actions button`);
@@ -309,22 +332,27 @@ GmailCleaner.Unread = {
         }
     },
 
+    /** Marks emails from all selected senders as read. */
     async markReadSelected() {
         await this.processSelectedSenders('/api/unread-mark-read', 'mark as read');
     },
 
+    /** Marks and archives emails from all selected senders. */
     async markReadAndArchiveSelected() {
         await this.processSelectedSenders('/api/unread-mark-read-archive', 'mark as read and archive');
     },
 
+    /** Archives emails from all selected senders. */
     async archiveSelected() {
         await this.processSelectedSenders('/api/unread-archive', 'archive');
     },
 
+    /** Deletes emails from all selected senders. */
     async deleteSelected() {
         await this.processSelectedSenders('/api/unread-delete', 'delete');
     },
 
+    /** Processes all selected senders with the specified API endpoint. */
     async processSelectedSenders(endpoint, actionName) {
         const checkboxes = document.querySelectorAll('.unread-cb:checked');
         if (checkboxes.length === 0) {
@@ -366,6 +394,7 @@ GmailCleaner.Unread = {
         }
     },
 
+    /** Polls action progress until complete, returns promise. */
     async pollActionProgress(actionName, senders) {
         const maxRetries = this.MAX_POLL_RETRIES;
         return new Promise((resolve, reject) => {
@@ -398,6 +427,7 @@ GmailCleaner.Unread = {
         });
     },
 
+    /** Polls action progress with overlay UI updates. */
     async pollActionProgressWithOverlay(actionName, checkboxes, retryCount = 0) {
         try {
             const response = await fetch('/api/unread-action-status');
@@ -434,6 +464,7 @@ GmailCleaner.Unread = {
         }
     },
 
+    /** Shows action progress overlay. */
     showActionOverlay(actionName, senderCount) {
         this.hideActionOverlay();
 
@@ -457,6 +488,7 @@ GmailCleaner.Unread = {
         document.body.appendChild(overlay);
     },
 
+    /** Updates action overlay progress bar and text. */
     updateActionOverlay(status) {
         const progressBar = document.getElementById('unreadActionProgressBar');
         const progressText = document.getElementById('unreadActionProgressText');
@@ -479,6 +511,7 @@ GmailCleaner.Unread = {
         }
     },
 
+    /** Removes action overlay from DOM. */
     hideActionOverlay() {
         const overlay = document.getElementById('unreadActionOverlay');
         if (overlay) {

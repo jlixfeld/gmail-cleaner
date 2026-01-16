@@ -5,6 +5,9 @@
 window.GmailCleaner = window.GmailCleaner || {};
 
 GmailCleaner.Auth = {
+    /**
+     * Checks authentication status and updates UI accordingly.
+     */
     async checkStatus() {
         try {
             const response = await fetch('/api/auth-status');
@@ -16,6 +19,10 @@ GmailCleaner.Auth = {
         }
     },
 
+    /**
+     * Updates UI based on authentication status.
+     * @param {Object} authStatus - Status object with logged_in and email properties.
+     */
     updateUI(authStatus) {
         const userSection = document.getElementById('userSection');
 
@@ -39,6 +46,9 @@ GmailCleaner.Auth = {
         }
     },
 
+    /**
+     * Loads Gmail labels and populates the filter dropdown.
+     */
     async loadLabelsForFilter() {
         try {
             // Load labels using the Labels module
@@ -51,6 +61,9 @@ GmailCleaner.Auth = {
         }
     },
 
+    /**
+     * Initiates Google OAuth sign-in flow. Shows Docker instructions if in web auth mode.
+     */
     async signIn() {
         const signInBtn = document.getElementById('signInBtn');
 
@@ -100,6 +113,10 @@ GmailCleaner.Auth = {
         }
     },
 
+    /**
+     * Polls auth status until logged in or timeout (120 attempts).
+     * @param {number} attempts - Current attempt count.
+     */
     async pollStatus(attempts = 0) {
         const maxAttempts = 120;
         const signInBtn = document.getElementById('signInBtn');
@@ -122,6 +139,9 @@ GmailCleaner.Auth = {
         }
     },
 
+    /**
+     * Resets sign-in button to default state after sign-in completes or fails.
+     */
     resetSignInButton() {
         const signInBtn = document.getElementById('signInBtn');
         if (signInBtn) {
@@ -133,11 +153,18 @@ GmailCleaner.Auth = {
         }
     },
 
+    /**
+     * Legacy web auth mode check - no longer needed as sign-in works everywhere.
+     * @deprecated Kept for backwards compatibility.
+     */
     async checkWebAuthMode() {
         // No longer needed - sign in works everywhere now!
         return;
     },
 
+    /**
+     * Signs out user after confirmation, clears results, and resets UI.
+     */
     async signOut() {
         if (!confirm('Sign out of your Gmail account?')) return;
 
@@ -153,6 +180,9 @@ GmailCleaner.Auth = {
         }
     },
 
+    /**
+     * Shows user menu dropdown (currently logs to console as placeholder).
+     */
     showUserMenu() {
         console.log('User menu clicked');
     }

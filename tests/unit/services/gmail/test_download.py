@@ -111,9 +111,11 @@ class TestDownloadEmailsBackground:
         callbacks = []
 
         def mock_add(request, callback):
+            """Collect callbacks for later execution."""
             callbacks.append(callback)
 
         def mock_execute():
+            """Execute batch by calling callbacks with mock responses."""
             responses = [
                 {
                     "id": "msg1",
@@ -188,13 +190,16 @@ class TestDownloadEmailsBackground:
         )
 
         def mock_new_batch():
+            """Create mock batch request with callbacks."""
             mock_batch = Mock()
             mock_batch._callbacks = []
 
             def add_request(request, callback):
+                """Collect callback for later execution."""
                 mock_batch._callbacks.append(callback)
 
             def execute():
+                """Execute callbacks with mock responses."""
                 for i, callback in enumerate(mock_batch._callbacks):
                     callback(
                         f"req{i}",
@@ -255,13 +260,16 @@ class TestDownloadEmailsBackground:
         )
 
         def mock_new_batch():
+            """Create mock batch request with callbacks."""
             mock_batch = Mock()
             mock_batch._callbacks = []
 
             def add_request(request, callback):
+                """Collect callback for later execution."""
                 mock_batch._callbacks.append(callback)
 
             def execute():
+                """Execute callbacks with mock responses."""
                 for i, callback in enumerate(mock_batch._callbacks):
                     callback(
                         f"req{i}",
@@ -304,13 +312,16 @@ class TestDownloadEmailsBackground:
         )
 
         def mock_new_batch():
+            """Create mock batch request with callbacks."""
             mock_batch = Mock()
             mock_batch._callbacks = []
 
             def add_request(request, callback):
+                """Collect callback for later execution."""
                 mock_batch._callbacks.append(callback)
 
             def execute():
+                """Execute first callback with mock response."""
                 callback = mock_batch._callbacks[0]
                 callback(
                     "req0",
@@ -353,13 +364,16 @@ class TestDownloadEmailsBackground:
         )
 
         def mock_new_batch():
+            """Create mock batch request with callbacks."""
             mock_batch = Mock()
             mock_batch._callbacks = []
 
             def add_request(request, callback):
+                """Collect callback for later execution."""
                 mock_batch._callbacks.append(callback)
 
             def execute():
+                """Execute first callback with mock response."""
                 callback = mock_batch._callbacks[0]
                 callback(
                     "req0",

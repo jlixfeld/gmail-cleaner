@@ -82,12 +82,14 @@ class TestScanEmails:
         batch_callback = None
 
         def mock_new_batch(callback):
+            """Create mock batch that stores callback for execution."""
             nonlocal batch_callback
             batch_callback = callback
             mock_batch = Mock()
             mock_batch.add = Mock()
 
             def mock_execute():
+                """Simulate batch execution with mock responses."""
                 # Simulate batch execution with callback responses
                 responses = [
                     {
@@ -166,10 +168,12 @@ class TestScanEmails:
 
         # Mock batch request - callback is passed to new_batch_http_request
         def mock_new_batch(callback):
+            """Create mock batch that stores callback for execution."""
             mock_batch = Mock()
             mock_batch.add = Mock()
 
             def mock_execute():
+                """Simulate batch execution with mock responses."""
                 # Two messages from same domain, one from different
                 responses = [
                     {
@@ -246,9 +250,11 @@ class TestScanEmails:
         )
 
         def mock_new_batch(callback):
+            """Create mock batch that stores callback for execution."""
             mock_batch = Mock()
 
             def mock_execute():
+                """Simulate batch with emails grouped by List-Id."""
                 # Two emails from different senders but same List-Id
                 responses = [
                     {
@@ -374,6 +380,7 @@ class TestScanEmails:
         call_count = [0]
 
         def list_execute():
+            """Return mock list of messages."""
             call_count[0] += 1
             if call_count[0] == 1:
                 return {
@@ -418,10 +425,12 @@ class TestScanEmailsNoUnsubscribeLinks:
 
         # Mock batch request with no unsubscribe header
         def mock_new_batch(callback):
+            """Create mock batch for testing email without unsubscribe link."""
             mock_batch = Mock()
             mock_batch.add = Mock()
 
             def mock_execute():
+                """Simulate batch with email missing unsubscribe header."""
                 response = {
                     "id": "msg1",
                     "payload": {

@@ -30,6 +30,7 @@ class AppState:
     """
 
     def __init__(self) -> None:
+        """Initialize state with locks and default values for all operations."""
         # === Locks for thread safety ===
         self._user_lock = threading.Lock()
         self._scan_lock = threading.Lock()

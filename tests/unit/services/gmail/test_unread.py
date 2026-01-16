@@ -127,10 +127,12 @@ class TestScanUnreadBySender:
 
         # Mock batch requests
         def mock_new_batch(callback):
+            """Create mock batch that invokes callback for each message."""
             batch = Mock()
             batch.add = Mock()
 
             def execute_batch():
+                """Simulate batch responses for 3 messages from 2 senders."""
                 # Simulate batch responses for 3 messages from 2 senders
                 messages = [
                     {

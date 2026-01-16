@@ -113,6 +113,7 @@ class TestUnsubscribeSingle:
         call_count = [0]
 
         def urlopen_side_effect(req, **kwargs):
+            """Simulate URL open with conditional success/failure."""
             call_count[0] += 1
             if call_count[0] == 1:
                 # First call (POST) fails
@@ -143,6 +144,7 @@ class TestUnsubscribeSingle:
         call_count = [0]
 
         def urlopen_side_effect(req, **kwargs):
+            """Simulate URL open with conditional success/failure."""
             call_count[0] += 1
             if call_count[0] == 1:
                 raise urllib.error.URLError("POST failed")
@@ -212,6 +214,7 @@ class TestUnsubscribeSingle:
         call_count = [0]
 
         def urlopen_side_effect(req, **kwargs):
+            """Simulate URL open with conditional success/failure."""
             call_count[0] += 1
             if call_count[0] == 1:
                 raise urllib.error.URLError("POST failed")

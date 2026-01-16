@@ -22,12 +22,23 @@ from app.services.gmail.helpers import (
 logger = logging.getLogger(__name__)
 
 
-def scan_emails(limit: int = 500, filters: Optional[dict] = None):
+def scan_emails(limit: int = 500, filters: Optional[dict] = None) -> None:
     """Scan emails for unsubscribe links using Gmail Batch API.
 
+    Groups results by List-Id (for mailing lists) or sender email. Updates
+    global state with progress and stores results in `state.scan_results`.
+
+    Note:
+        This is a long-running operation. Progress is communicated via
+        `state.scan_status` which should be polled by the caller.
+
     Args:
-        limit: Maximum emails to scan. 0 = scan all (no limit).
-        filters: Optional Gmail filter options.
+        limit: Maximum emails to scan. 0 means no limit (scan all).
+        filters: Gmail filter dict with keys: older_than, after_date,
+            before_date, larger_than, category, sender, label.
+
+    Raises:
+        No exceptions raised; errors are captured in `state.scan_status['error']`.
     """
     # Validate input - negative values are invalid, 0 means "scan all"
     if limit < 0:
@@ -101,6 +112,7 @@ def scan_emails(limit: int = 500, filters: Optional[dict] = None):
         batch_size = 100
 
         def process_message(request_id, response, exception) -> None:
+            """Batch callback to extract unsubscribe links and group by sender/list."""
             nonlocal processed
             processed += 1
 

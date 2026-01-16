@@ -13,9 +13,19 @@ from app.services.auth import get_gmail_service
 
 
 def download_emails_background(senders: list[str]) -> None:
-    """Download email metadata for selected senders as CSV (background task).
+    """Download email metadata for selected senders as CSV.
 
-    Uses message IDs stored during scan to download only scanned emails.
+    Fetches full email content (including body) and generates a CSV file.
+    Uses message IDs from delete scan results to ensure only scanned
+    emails are included.
+
+    Note:
+        This is a long-running background operation. Progress is
+        communicated via `state.download_status`. CSV data is stored
+        in state and retrieved via `get_download_csv()`.
+
+    Args:
+        senders: List of sender email addresses to include in download
     """
     state.reset_download()
 
@@ -95,6 +105,7 @@ def download_emails_background(senders: list[str]) -> None:
             def callback(
                 _request_id, response, exception, results=batch_results
             ) -> None:
+                """Batch callback to collect successful message responses."""
                 if exception is None and response:
                     results.append(response)
 

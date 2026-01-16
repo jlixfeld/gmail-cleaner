@@ -67,6 +67,7 @@ def mock_gmail_auth(monkeypatch):
     original_exists = os.path.exists
 
     def mock_exists(path):
+        """Return False for credential files to prevent OAuth flow."""
         path_str = str(path)
         if "credentials.json" in path_str or "token.json" in path_str:
             return False

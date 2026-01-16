@@ -5,6 +5,10 @@
 window.GmailCleaner = window.GmailCleaner || {};
 
 GmailCleaner.Scanner = {
+    /**
+     * Copies Gmail search query to clipboard with fallback for older browsers.
+     * @param {string} query - The Gmail query string to copy.
+     */
     async copyGmailQuery(query) {
         try {
             await navigator.clipboard.writeText(query);
@@ -21,12 +25,13 @@ GmailCleaner.Scanner = {
         }
     },
 
+    /**
+     * Formats a date range as "MM/DD/YYYY to MM/DD/YYYY" (oldest to newest).
+     * @param {string} firstDate - RFC 2822 date string.
+     * @param {string} lastDate - RFC 2822 date string.
+     * @returns {string} Formatted date range or empty string if invalid.
+     */
     formatDateRange(firstDate, lastDate) {
-        /**
-         * Parse RFC 2822 date string and format as MM/DD/YYYY
-         * Example: "Wed, 15 Nov 2025 10:30:00 +0000" -> "11/15/2025"
-         * Returns date range from oldest to newest
-         */
         const formatDate = (dateStr) => {
             try {
                 const date = new Date(dateStr);
@@ -57,6 +62,9 @@ GmailCleaner.Scanner = {
         }
     },
 
+    /**
+     * Starts email scan for unsubscribe links. Shows progress and polls for results.
+     */
     async startScan() {
         if (GmailCleaner.scanning) return;
 
@@ -102,6 +110,9 @@ GmailCleaner.Scanner = {
         }
     },
 
+    /**
+     * Polls scan progress, updates UI, and fetches results when done.
+     */
     async pollProgress() {
         try {
             const response = await fetch('/api/status');
@@ -139,6 +150,9 @@ GmailCleaner.Scanner = {
         }
     },
 
+    /**
+     * Resets scan button to default state after scan completes.
+     */
     resetScan() {
         GmailCleaner.scanning = false;
         const scanBtn = document.getElementById('scanBtn');
@@ -151,12 +165,18 @@ GmailCleaner.Scanner = {
         `;
     },
 
+    /**
+     * Updates results badge count in navigation.
+     */
     updateResultsBadge() {
         const badge = document.getElementById('resultsBadge');
         badge.textContent = GmailCleaner.results.length;
         badge.style.display = GmailCleaner.results.length > 0 ? 'inline' : 'none';
     },
 
+    /**
+     * Renders scan results list with unsubscribe/delete buttons for each sender.
+     */
     displayResults() {
         const resultsList = document.getElementById('resultsList');
         const resultsSection = document.getElementById('resultsSection');
@@ -260,6 +280,10 @@ GmailCleaner.Scanner = {
         });
     },
 
+    /**
+     * Performs one-click unsubscribe via API for a specific sender.
+     * @param {number} index - Index of result in GmailCleaner.results array.
+     */
     async autoUnsubscribe(index) {
         const r = GmailCleaner.results[index];
         const btn = document.getElementById('unsub-' + index);
@@ -294,6 +318,10 @@ GmailCleaner.Scanner = {
         }
     },
 
+    /**
+     * Opens unsubscribe link in new tab for manual unsubscription.
+     * @param {number} index - Index of result in GmailCleaner.results array.
+     */
     openLink(index) {
         const r = GmailCleaner.results[index];
         const btn = document.getElementById('unsub-' + index);
@@ -304,6 +332,9 @@ GmailCleaner.Scanner = {
         // Keep button clickable so user can re-open if needed
     },
 
+    /**
+     * Toggles all result checkboxes based on select-all checkbox state.
+     */
     toggleSelectAll() {
         const selectAll = document.getElementById('selectAll');
         document.querySelectorAll('.result-cb').forEach(cb => {
@@ -311,6 +342,9 @@ GmailCleaner.Scanner = {
         });
     },
 
+    /**
+     * Processes unsubscribe for all checked items (auto or manual depending on type).
+     */
     async unsubscribeSelected() {
         const selected = [];
         document.querySelectorAll('.result-cb:checked').forEach(cb => {
@@ -374,6 +408,9 @@ GmailCleaner.Scanner = {
         }
     },
 
+    /**
+     * Exports scan results to a text file download.
+     */
     exportResults() {
         if (!GmailCleaner.results.length) {
             alert('No results to export');
@@ -394,6 +431,10 @@ GmailCleaner.Scanner = {
         a.click();
     },
 
+    /**
+     * Deletes all emails from a specific sender (moves to Trash).
+     * @param {number} index - Index of result in GmailCleaner.results array.
+     */
     async deleteSubscriptionEmails(index) {
         const r = GmailCleaner.results[index];
         const btn = document.getElementById('del-' + index);
@@ -462,6 +503,10 @@ GmailCleaner.Scanner = {
         }
     },
 
+    /**
+     * Unsubscribes from sender and deletes all their emails in one action.
+     * @param {number} index - Index of result in GmailCleaner.results array.
+     */
     async unsubscribeAndDelete(index) {
         const r = GmailCleaner.results[index];
         const comboBtn = document.getElementById('combo-' + index);
@@ -572,6 +617,9 @@ GmailCleaner.Scanner = {
         }
     },
 
+    /**
+     * Deletes emails from all checked senders via bulk API.
+     */
     async deleteSelectedSubscriptions() {
         const checkboxes = document.querySelectorAll('.result-cb:checked');
         if (checkboxes.length === 0) {
@@ -633,6 +681,12 @@ GmailCleaner.Scanner = {
         }
     },
 
+    /**
+     * Polls bulk delete progress until completion or 5-minute timeout.
+     * @param {NodeList} checkboxes - The checked checkboxes being processed.
+     * @param {number[]} indices - Result indices being deleted.
+     * @param {number} startTime - Operation start timestamp for timeout tracking.
+     */
     async pollDeleteProgress(checkboxes, indices, startTime = Date.now()) {
         const TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -723,6 +777,11 @@ GmailCleaner.Scanner = {
         }
     },
 
+    /**
+     * Shows full-screen overlay with delete progress indicator.
+     * @param {number} senderCount - Number of senders being processed.
+     * @param {number} emailCount - Total emails being deleted.
+     */
     showDeleteOverlay(senderCount, emailCount) {
         this.hideDeleteOverlay();
 
@@ -746,6 +805,10 @@ GmailCleaner.Scanner = {
         document.body.appendChild(overlay);
     },
 
+    /**
+     * Updates delete overlay progress bar and status text.
+     * @param {Object} status - Status object with progress, message, deleted_count properties.
+     */
     updateDeleteOverlay(status) {
         const progressBar = document.getElementById('scannerDeleteProgressBar');
         const progressText = document.getElementById('scannerDeleteProgressText');
@@ -768,6 +831,9 @@ GmailCleaner.Scanner = {
         }
     },
 
+    /**
+     * Removes delete progress overlay from DOM.
+     */
     hideDeleteOverlay() {
         const overlay = document.getElementById('scannerDeleteOverlay');
         if (overlay) {
@@ -775,6 +841,9 @@ GmailCleaner.Scanner = {
         }
     },
 
+    /**
+     * Unsubscribes and deletes emails for all checked senders sequentially.
+     */
     async unsubscribeAndDeleteSelected() {
         const checkboxes = document.querySelectorAll('.result-cb:checked');
         if (checkboxes.length === 0) {

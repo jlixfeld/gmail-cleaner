@@ -328,6 +328,7 @@ def create_batch_callback(messages: list):
         message_index = [0]  # Use list to allow mutation in nested function
 
         def execute_batch():
+            """Simulate batch execution by calling callback for each message."""
             for msg in messages:
                 callback(str(message_index[0]), msg, None)
                 message_index[0] += 1

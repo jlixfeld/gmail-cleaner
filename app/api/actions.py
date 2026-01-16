@@ -74,6 +74,9 @@ router = APIRouter(prefix="/api", tags=["Actions"])
 logger = logging.getLogger(__name__)
 
 
+# ----- Scan & Unsubscribe Endpoints -----
+
+
 @router.post("/scan")
 @limiter.limit(HEAVY_OPERATION_RATE_LIMIT)
 async def api_scan(
@@ -83,6 +86,9 @@ async def api_scan(
     filters_dict = body.filters.model_dump(exclude_none=True) if body.filters else None
     background_tasks.add_task(scan_emails, body.limit, filters_dict)
     return {"status": "started"}
+
+
+# ----- Authentication Endpoints -----
 
 
 @router.post("/sign-in")
@@ -121,6 +127,9 @@ async def api_unsubscribe(request: Request, body: UnsubscribeRequest):
         ) from e
 
 
+# ----- Mark Read Endpoints -----
+
+
 @router.post("/mark-read")
 @limiter.limit(HEAVY_OPERATION_RATE_LIMIT)
 async def api_mark_read(
@@ -130,6 +139,9 @@ async def api_mark_read(
     filters_dict = body.filters.model_dump(exclude_none=True) if body.filters else None
     background_tasks.add_task(mark_emails_as_read, body.count, filters_dict)
     return {"status": "started"}
+
+
+# ----- Delete Endpoints -----
 
 
 @router.post("/delete-scan")

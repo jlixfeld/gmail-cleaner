@@ -198,10 +198,12 @@ class TestBuildKnownSendersCache:
         )
 
         def mock_new_batch(callback):
+            """Create mock batch that invokes callback for each message."""
             batch = Mock()
             batch.add = Mock()
 
             def execute_batch():
+                """Execute batch by calling callback for each mock message."""
                 for i, msg in enumerate(messages):
                     callback(str(i), msg, None)
 
@@ -454,10 +456,12 @@ class TestScanUnknownSendersForDelete:
         )
 
         def mock_new_batch(callback):
+            """Create mock batch that invokes callback for each message."""
             batch = Mock()
             batch.add = Mock()
 
             def execute_batch():
+                """Execute batch by calling callback for each mock message."""
                 for i, msg in enumerate(messages):
                     callback(str(i), msg, None)
 

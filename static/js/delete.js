@@ -4,6 +4,10 @@
 
 window.GmailCleaner = window.GmailCleaner || {};
 
+/**
+ * Delete Emails Module - manages bulk email deletion with sender protection.
+ * Supports domain grouping, recipient-based protection, and batch operations.
+ */
 GmailCleaner.Delete = {
   // Valid senders, known recipients, and overrides state (loaded from DB)
   validSenders: new Set(),
@@ -20,11 +24,8 @@ GmailCleaner.Delete = {
   selectedDomains: new Set(),
   selectedSenders: new Set(),
 
+  /** Formats the most recent date as MM/DD/YYYY. */
   formatMostRecentDate(firstDate, lastDate) {
-    /**
-     * Parse RFC 2822 date string and format as MM/DD/YYYY
-     * Returns only the most recent date
-     */
     const formatDate = (dateStr) => {
       try {
         const date = new Date(dateStr);
@@ -50,7 +51,7 @@ GmailCleaner.Delete = {
     return formatDate(lastDate) || formatDate(firstDate) || "";
   },
 
-  // Sort results by current sort settings (date or count)
+  /** Sorts results by current sort settings (date or count). */
   sortResults(results) {
     const sortBy = GmailCleaner.sortBy.delete;
     const sortOrder = GmailCleaner.sortOrder.delete;
@@ -69,7 +70,7 @@ GmailCleaner.Delete = {
     });
   },
 
-  // Sort domain groups by current sort settings
+  /** Sorts domain groups by current sort settings (date or count). */
   sortDomainGroups(groups) {
     const sortBy = GmailCleaner.sortBy.delete;
     const sortOrder = GmailCleaner.sortOrder.delete;
@@ -91,7 +92,7 @@ GmailCleaner.Delete = {
   // Track if we've already scanned recipients this session
   recipientsScanComplete: false,
 
-  // Load existing scan results when Delete tab is shown
+  /** Loads existing scan results from server cache when Delete tab is shown. */
   async loadExistingResults() {
     // Skip if we already have results loaded
     if (GmailCleaner.deleteResults && GmailCleaner.deleteResults.length > 0) {
@@ -118,7 +119,7 @@ GmailCleaner.Delete = {
     }
   },
 
-  // Auto-scan recipients when Delete tab is selected
+  /** Auto-scans recipients when Delete tab is selected to build protection list. */
   async autoScanRecipients() {
     if (this.recipientsScanInProgress) return;
 
@@ -156,6 +157,7 @@ GmailCleaner.Delete = {
     }
   },
 
+  /** Polls recipient scan progress and updates UI until complete. */
   async pollRecipientsScanProgress() {
     try {
       const response = await fetch("/api/recipients-scan-status");
@@ -182,6 +184,7 @@ GmailCleaner.Delete = {
     }
   },
 
+  /** Hides the recipients scan overlay and marks scan complete. */
   hideRecipientsScanOverlay() {
     this.recipientsScanInProgress = false;
     this.recipientsScanComplete = true; // Mark scan as done for this session
@@ -189,6 +192,7 @@ GmailCleaner.Delete = {
     if (overlay) overlay.classList.add("hidden");
   },
 
+  /** Loads valid senders from the database into local Set. */
   async loadValidSenders() {
     try {
       const response = await fetch("/api/valid-senders");
@@ -202,6 +206,7 @@ GmailCleaner.Delete = {
     }
   },
 
+  /** Loads known recipients from the database into local Set. */
   async loadMyRecipients() {
     try {
       const response = await fetch("/api/my-recipients");
@@ -215,6 +220,7 @@ GmailCleaner.Delete = {
     }
   },
 
+  /** Loads recipient overrides (senders marked deletable despite being known). */
   async loadRecipientOverrides() {
     try {
       const response = await fetch("/api/recipient-overrides");
@@ -228,6 +234,7 @@ GmailCleaner.Delete = {
     }
   },
 
+  /** Updates the UI badge counts for valid senders, recipients, and overrides. */
   updateReferenceCounts() {
     const validCount = document.getElementById("validSendersCount");
     const recipientsCount = document.getElementById("knownRecipientsCount");
@@ -237,10 +244,10 @@ GmailCleaner.Delete = {
     if (overridesCount) overridesCount.textContent = this.recipientOverrides.size;
   },
 
-  // Tri-state toggle: Red -> Green -> Orange -> Red
-  // Red (neither): Not protected, can delete
-  // Green (valid): Protected via valid senders
-  // Orange (override): Marked as deletable even if known recipient
+  /**
+   * Cycles sender protection state: Red (deletable) → Green (protected) → Orange (override).
+   * @param {string} email - Sender email to toggle.
+   */
   async cycleSenderState(email) {
     const emailLower = email.toLowerCase();
     const isValid = this.validSenders.has(emailLower);
@@ -289,8 +296,11 @@ GmailCleaner.Delete = {
     }
   },
 
-  // Check if sender is protected
-  // Protected if: valid sender OR (known recipient WITHOUT override)
+  /**
+   * Checks if sender is protected from deletion.
+   * @param {string} email - Sender email to check.
+   * @returns {boolean} True if valid sender or known recipient without override.
+   */
   isProtectedSender(email) {
     const emailLower = email.toLowerCase();
     if (this.validSenders.has(emailLower)) return true;
@@ -302,7 +312,7 @@ GmailCleaner.Delete = {
     return false;
   },
 
-  // Modal handlers
+  /** Opens modal showing list of valid (protected) senders. */
   async showValidSendersList() {
     const modal = document.getElementById("validSendersModal");
     const list = document.getElementById("validSendersList");
@@ -343,11 +353,16 @@ GmailCleaner.Delete = {
     modal.classList.remove("hidden");
   },
 
+  /** Closes the valid senders modal. */
   closeValidSendersModal() {
     const modal = document.getElementById("validSendersModal");
     modal.classList.add("hidden");
   },
 
+  /**
+   * Removes a sender from the valid senders list.
+   * @param {string} email - Email to remove from valid senders.
+   */
   async removeValidSenderFromList(email) {
     const emailLower = email.toLowerCase();
     try {
@@ -369,6 +384,7 @@ GmailCleaner.Delete = {
     await this.showValidSendersList();
   },
 
+  /** Opens modal showing list of known recipients (people user has emailed). */
   async showKnownRecipientsList() {
     const modal = document.getElementById("knownRecipientsModal");
     const list = document.getElementById("knownRecipientsList");
@@ -401,12 +417,17 @@ GmailCleaner.Delete = {
     modal.classList.remove("hidden");
   },
 
+  /** Closes the known recipients modal. */
   closeKnownRecipientsModal() {
     const modal = document.getElementById("knownRecipientsModal");
     modal.classList.add("hidden");
   },
 
-  // Selection state management
+  /**
+   * Gets checkbox state for a domain (none, partial, all).
+   * @param {string} domain - Domain to check.
+   * @returns {string} 'none', 'partial', or 'all' based on selected senders.
+   */
   getDomainCheckboxState(domain) {
     const group = this.domainGroups.find((g) => g.domain === domain);
     if (!group) return "none";
@@ -427,6 +448,10 @@ GmailCleaner.Delete = {
     return "partial";
   },
 
+  /**
+   * Updates checkbox visual state (checked, indeterminate) for a domain.
+   * @param {string} domain - Domain to update.
+   */
   updateDomainCheckboxVisual(domain) {
     const checkbox = document.querySelector(
       `.domain-cb[data-domain="${CSS.escape(domain)}"]`,
@@ -444,6 +469,7 @@ GmailCleaner.Delete = {
     }
   },
 
+  /** Updates checkbox visual state for all domain groups. */
   updateAllDomainCheckboxStates() {
     this.domainGroups.forEach((group) => {
       this.updateDomainCheckboxVisual(group.domain);
@@ -451,6 +477,7 @@ GmailCleaner.Delete = {
     this.updateSelectAllState();
   },
 
+  /** Updates the master "select all" checkbox state based on current selections. */
   updateSelectAllState() {
     const selectAll = document.getElementById("deleteSelectAll");
     if (!selectAll) return;
@@ -481,6 +508,11 @@ GmailCleaner.Delete = {
     }
   },
 
+  /**
+   * Handles domain checkbox toggle with two-click cycle logic.
+   * @param {string} domain - Domain being toggled.
+   * @param {boolean} isChecked - New checkbox state.
+   */
   handleDomainCheckboxChange(domain, isChecked) {
     const group = this.domainGroups.find((g) => g.domain === domain);
     if (!group) return;
@@ -532,6 +564,12 @@ GmailCleaner.Delete = {
     this.updateDomainDeleteButton(domain);
   },
 
+  /**
+   * Handles individual sender checkbox change within a domain.
+   * @param {string} email - Sender email.
+   * @param {string} domain - Domain the sender belongs to.
+   * @param {boolean} isChecked - New checkbox state.
+   */
   handleSenderCheckboxChange(email, domain, isChecked) {
     if (isChecked) {
       this.selectedSenders.add(email);
@@ -554,6 +592,11 @@ GmailCleaner.Delete = {
     this.updateDomainDeleteButton(domain);
   },
 
+  /**
+   * Handles sender checkbox change in flat (non-grouped) view.
+   * @param {string} email - Sender email.
+   * @param {boolean} isChecked - New checkbox state.
+   */
   handleFlatSenderCheckboxChange(email, isChecked) {
     if (isChecked) {
       this.selectedSenders.add(email);
@@ -563,6 +606,10 @@ GmailCleaner.Delete = {
     this.updateSelectAllState();
   },
 
+  /**
+   * Updates the domain delete button text with selected email count.
+   * @param {string} domain - Domain to update button for.
+   */
   updateDomainDeleteButton(domain) {
     const group = this.domainGroups.find((g) => g.domain === domain);
     if (!group) return;
@@ -588,6 +635,7 @@ GmailCleaner.Delete = {
     }
   },
 
+  /** Restores checkbox states from selectedSenders Set after re-render. */
   restoreSelectionState() {
     // Restore domain checkbox states
     document.querySelectorAll(".domain-cb").forEach((cb) => {
@@ -606,11 +654,13 @@ GmailCleaner.Delete = {
     this.updateSelectAllState();
   },
 
+  /** Clears all domain and sender selections. */
   clearSelectionState() {
     this.selectedDomains.clear();
     this.selectedSenders.clear();
   },
 
+  /** Starts a delete scan to find emails grouped by sender. */
   async startScan() {
     if (GmailCleaner.deleteScanning) return;
 
@@ -663,6 +713,7 @@ GmailCleaner.Delete = {
     }
   },
 
+  /** Polls delete scan progress and updates UI until complete. */
   async pollProgress() {
     try {
       const response = await fetch("/api/delete-scan-status");
@@ -691,6 +742,7 @@ GmailCleaner.Delete = {
     }
   },
 
+  /** Resets scan button to default state. */
   resetScan() {
     GmailCleaner.deleteScanning = false;
     const scanBtn = document.getElementById("deleteScanBtn");
@@ -705,6 +757,7 @@ GmailCleaner.Delete = {
     this.resetKnownSendersScan();
   },
 
+  /** Displays scan results, dispatching to flat or domain-grouped renderer. */
   displayResults() {
     const resultsList = document.getElementById("deleteResultsList");
     const resultsSection = document.getElementById("deleteResultsSection");
@@ -736,6 +789,7 @@ GmailCleaner.Delete = {
     }
   },
 
+  /** Renders results as a flat list of senders with protection status buttons. */
   displayFlatResults() {
     const resultsList = document.getElementById("deleteResultsList");
 
@@ -822,6 +876,7 @@ GmailCleaner.Delete = {
     });
   },
 
+  /** Toggles between flat and domain-grouped view modes. */
   toggleGroupByDomain() {
     const toggle = document.getElementById("groupByDomainToggle");
     this.groupByDomain = toggle.checked;
@@ -836,6 +891,7 @@ GmailCleaner.Delete = {
     this.displayResults();
   },
 
+  /** Groups scan results by domain, aggregating email counts and date ranges. */
   buildDomainGroups() {
     const domainMap = new Map();
 
@@ -891,6 +947,7 @@ GmailCleaner.Delete = {
     }));
   },
 
+  /** Renders results grouped by domain with expandable sender lists. */
   displayDomainResults() {
     const resultsList = document.getElementById("deleteResultsList");
 
@@ -909,6 +966,13 @@ GmailCleaner.Delete = {
     });
   },
 
+  /**
+   * Creates a collapsible domain row element.
+   * @param {Object} group - Domain group data.
+   * @param {number} index - Domain index for button IDs.
+   * @param {boolean} isExpanded - Whether the domain is expanded.
+   * @returns {HTMLElement} Domain row element.
+   */
   createDomainRow(group, index, isExpanded) {
     const row = document.createElement("div");
     row.className = "result-item domain-row" + (isExpanded ? " expanded" : "");
@@ -961,6 +1025,11 @@ GmailCleaner.Delete = {
     return row;
   },
 
+  /**
+   * Creates the expanded senders table for a domain.
+   * @param {Object} group - Domain group containing senders array.
+   * @returns {HTMLElement} Container with sender rows.
+   */
   createSendersTable(group) {
     const container = document.createElement("div");
     container.className = "domain-senders-container";
@@ -1079,6 +1148,10 @@ GmailCleaner.Delete = {
     return container;
   },
 
+  /**
+   * Toggles expansion state of a domain group.
+   * @param {string} domain - Domain to expand/collapse.
+   */
   toggleDomainExpand(domain) {
     if (this.expandedDomains.has(domain)) {
       this.expandedDomains.delete(domain);
@@ -1089,6 +1162,10 @@ GmailCleaner.Delete = {
     this.restoreSelectionState();
   },
 
+  /**
+   * Deletes emails from selected senders in a domain.
+   * @param {string} domain - Domain to delete selected senders from.
+   */
   async deleteDomainEmails(domain) {
     const group = this.domainGroups.find((g) => g.domain === domain);
     if (!group) return;
@@ -1134,6 +1211,10 @@ GmailCleaner.Delete = {
     }
   },
 
+  /**
+   * Polls domain delete progress and updates overlay until complete.
+   * @param {string} domain - Domain being deleted.
+   */
   async pollDomainDeleteProgress(domain) {
     try {
       const response = await fetch("/api/delete-bulk-status");
@@ -1170,6 +1251,10 @@ GmailCleaner.Delete = {
     }
   },
 
+  /**
+   * Enables or disables action toolbar buttons.
+   * @param {boolean} enabled - Whether to enable buttons.
+   */
   setActionButtonsEnabled(enabled) {
     const buttons = [
       "applyLabelBtn",
@@ -1186,6 +1271,7 @@ GmailCleaner.Delete = {
     });
   },
 
+  /** Toggles all checkboxes based on master select-all state. */
   toggleSelectAll() {
     const selectAll = document.getElementById("deleteSelectAll");
     const checked = selectAll.checked;
@@ -1247,6 +1333,10 @@ GmailCleaner.Delete = {
     this.updateAllDomainCheckboxStates();
   },
 
+  /**
+   * Deletes all emails from a single sender.
+   * @param {number} index - Index of sender in deleteResults array.
+   */
   async deleteSenderEmails(index) {
     const r = GmailCleaner.deleteResults[index];
     const btn = document.getElementById("delete-" + index);
@@ -1312,6 +1402,7 @@ GmailCleaner.Delete = {
     }
   },
 
+  /** Bulk deletes emails from all selected (non-protected) senders. */
   async deleteSelected() {
     // Use selectedSenders Set for reliable selection state
     // Double-check by filtering out any protected senders (defense in depth)
@@ -1387,6 +1478,10 @@ GmailCleaner.Delete = {
     }
   },
 
+  /**
+   * Polls bulk delete progress and updates UI until complete.
+   * @param {Array<Object>} senderInfoList - List of sender info with email, index, count.
+   */
   async pollDeleteProgress(senderInfoList) {
     try {
       const response = await fetch("/api/delete-bulk-status");
@@ -1440,6 +1535,11 @@ GmailCleaner.Delete = {
     }
   },
 
+  /**
+   * Shows the bulk delete progress overlay.
+   * @param {number} senderCount - Number of senders being deleted.
+   * @param {number} emailCount - Total emails being deleted.
+   */
   showDeleteOverlay(senderCount, emailCount) {
     // Remove any existing overlay
     this.hideDeleteOverlay();
@@ -1464,6 +1564,10 @@ GmailCleaner.Delete = {
     document.body.appendChild(overlay);
   },
 
+  /**
+   * Updates delete overlay progress bar and stats.
+   * @param {Object} status - Status object with progress, message, deleted_count.
+   */
   updateDeleteOverlay(status) {
     const progressBar = document.getElementById("deleteBulkProgressBar");
     const progressText = document.getElementById("deleteBulkProgressText");
@@ -1488,6 +1592,7 @@ GmailCleaner.Delete = {
     }
   },
 
+  /** Removes the delete progress overlay. */
   hideDeleteOverlay() {
     const overlay = document.getElementById("deleteOverlay");
     if (overlay) {
@@ -1495,7 +1600,7 @@ GmailCleaner.Delete = {
     }
   },
 
-  // Known senders cache functionality
+  /** Starts a scan to build the known senders cache. */
   async startKnownSendersScan() {
     if (this.buildingKnownSenders) return;
 
@@ -1511,6 +1616,7 @@ GmailCleaner.Delete = {
     await this.buildKnownSenders();
   },
 
+  /** Builds known senders cache by scanning sent emails. */
   async buildKnownSenders() {
     this.buildingKnownSenders = true;
 
@@ -1543,6 +1649,7 @@ GmailCleaner.Delete = {
     }
   },
 
+  /** Polls known senders scan progress until complete. */
   async pollKnownSendersProgress() {
     try {
       const response = await fetch("/api/known-senders-status");
@@ -1568,6 +1675,7 @@ GmailCleaner.Delete = {
     }
   },
 
+  /** Shows the known senders scan progress overlay. */
   showKnownSendersOverlay() {
     this.hideKnownSendersOverlay();
 
@@ -1590,6 +1698,10 @@ GmailCleaner.Delete = {
     document.body.appendChild(overlay);
   },
 
+  /**
+   * Updates known senders overlay progress.
+   * @param {Object} status - Status with progress, message, sender_count, scanned_emails.
+   */
   updateKnownSendersOverlay(status) {
     const progressBar = document.getElementById("knownSendersProgressBar");
     const progressText = document.getElementById("knownSendersProgressText");
@@ -1606,6 +1718,7 @@ GmailCleaner.Delete = {
     }
   },
 
+  /** Removes the known senders progress overlay. */
   hideKnownSendersOverlay() {
     const overlay = document.getElementById("knownSendersOverlay");
     if (overlay) {
@@ -1613,6 +1726,10 @@ GmailCleaner.Delete = {
     }
   },
 
+  /**
+   * Updates the known senders status text with cached count.
+   * @param {number} count - Number of known senders cached.
+   */
   updateKnownSendersStatusText(count) {
     const statusText = document.getElementById("knownSendersStatusText");
     if (statusText) {
@@ -1621,6 +1738,7 @@ GmailCleaner.Delete = {
     }
   },
 
+  /** Resets known senders scan button to default state. */
   resetKnownSendersScan() {
     this.buildingKnownSenders = false;
     const scanBtn = document.getElementById("deleteUnknownBtn");
@@ -1635,7 +1753,7 @@ GmailCleaner.Delete = {
     }
   },
 
-  // Download emails functionality
+  /** Downloads email data for selected senders as CSV. */
   async downloadSelected() {
     const checkboxes = document.querySelectorAll(".delete-cb:checked");
     if (checkboxes.length === 0) {
@@ -1673,6 +1791,7 @@ GmailCleaner.Delete = {
     }
   },
 
+  /** Polls download progress and triggers CSV download when complete. */
   async pollDownloadProgress() {
     try {
       const response = await fetch("/api/download-status");
@@ -1703,6 +1822,11 @@ GmailCleaner.Delete = {
     }
   },
 
+  /**
+   * Shows the download progress overlay.
+   * @param {number} senderCount - Number of senders being downloaded.
+   * @param {number} emailCount - Total emails being downloaded.
+   */
   showDownloadOverlay(senderCount, emailCount) {
     this.hideDownloadOverlay();
 
@@ -1727,6 +1851,10 @@ GmailCleaner.Delete = {
     document.body.appendChild(overlay);
   },
 
+  /**
+   * Updates download overlay progress.
+   * @param {Object} status - Status with progress, message, fetched_count.
+   */
   updateDownloadOverlay(status) {
     const overlay = document.getElementById("downloadOverlay");
     if (!overlay) return;
@@ -1747,6 +1875,7 @@ GmailCleaner.Delete = {
     }
   },
 
+  /** Removes the download progress overlay. */
   hideDownloadOverlay() {
     const overlay = document.getElementById("downloadOverlay");
     if (overlay) {
@@ -1756,18 +1885,23 @@ GmailCleaner.Delete = {
 };
 
 // Global shortcuts
+/** Starts the delete scan operation. */
 function startDeleteScan() {
   GmailCleaner.Delete.startScan();
 }
+/** Starts the known senders scan operation. */
 function startKnownSendersScan() {
   GmailCleaner.Delete.startKnownSendersScan();
 }
+/** Toggles select-all checkbox for delete view. */
 function toggleDeleteSelectAll() {
   GmailCleaner.Delete.toggleSelectAll();
 }
+/** Deletes emails from all selected senders. */
 function deleteSelectedSenders() {
   GmailCleaner.Delete.deleteSelected();
 }
+/** Downloads email data for selected senders. */
 function downloadSelectedEmails() {
   GmailCleaner.Delete.downloadSelected();
 }

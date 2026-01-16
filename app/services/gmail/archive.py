@@ -9,8 +9,19 @@ from app.services.auth import get_gmail_service
 from app.services.gmail.helpers import sanitize_gmail_query_value
 
 
-def archive_emails_background(senders: list[str]):
-    """Archive emails from selected senders (remove INBOX label)."""
+def archive_emails_background(senders: list[str]) -> None:
+    """Archive emails from selected senders by removing INBOX label.
+
+    Queries Gmail for each sender's emails in INBOX and removes the
+    INBOX label (archiving). Emails remain accessible via All Mail.
+
+    Note:
+        This is a long-running background operation. Progress is
+        communicated via `state.archive_status`.
+
+    Args:
+        senders: List of sender email addresses to archive
+    """
     state.reset_archive()
 
     # Validate input

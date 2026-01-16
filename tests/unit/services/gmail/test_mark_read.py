@@ -164,6 +164,7 @@ class TestMarkEmailsAsRead:
         call_count = [0]
 
         def list_execute():
+            """Return mock list of messages."""
             call_count[0] += 1
             if call_count[0] == 1:
                 return {

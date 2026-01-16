@@ -14,7 +14,19 @@ logger = logging.getLogger(__name__)
 
 
 def unsubscribe_single(domain: str, link: str) -> dict:
-    """Attempt to unsubscribe from a single sender."""
+    """Attempt to unsubscribe from a single sender via List-Unsubscribe link.
+
+    Tries RFC 8058 one-click POST first, falls back to GET request.
+    Validates URL against SSRF attacks before making request.
+
+    Args:
+        domain: Sender domain (for logging/response only)
+        link: Unsubscribe URL (http/https) or mailto: link
+
+    Returns:
+        Dict with keys: success (bool), message (str), and optionally
+        domain (str) or type ('mailto')
+    """
     if not link:
         return {"success": False, "message": "No unsubscribe link provided"}
 

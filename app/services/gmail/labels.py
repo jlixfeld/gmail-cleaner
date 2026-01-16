@@ -9,8 +9,16 @@ from app.services.auth import get_gmail_service
 from app.services.gmail.helpers import sanitize_gmail_query_value
 
 
+# ----- Label CRUD Operations -----
+
+
 def get_labels() -> dict:
-    """Get all Gmail labels."""
+    """Get all Gmail labels, categorized as system or user labels.
+
+    Returns:
+        Dict with keys: success (bool), system_labels (list), user_labels (list),
+        error (str or None)
+    """
     service, error = get_gmail_service()
     if error:
         return {"success": False, "labels": [], "error": error}
@@ -49,7 +57,15 @@ def get_labels() -> dict:
 
 
 def create_label(name: str) -> dict:
-    """Create a new Gmail label."""
+    """Create a new Gmail label.
+
+    Args:
+        name: Label name (whitespace will be trimmed)
+
+    Returns:
+        Dict with keys: success (bool), label (dict with id/name/type or None),
+        error (str or None)
+    """
     if not name or not name.strip():
         return {"success": False, "label": None, "error": "Label name is required"}
 
@@ -87,7 +103,14 @@ def create_label(name: str) -> dict:
 
 
 def delete_label(label_id: str) -> dict:
-    """Delete a Gmail label."""
+    """Delete a Gmail label.
+
+    Args:
+        label_id: Gmail label ID (not the name)
+
+    Returns:
+        Dict with keys: success (bool), error (str or None)
+    """
     if not label_id:
         return {"success": False, "error": "Label ID is required"}
 
@@ -105,6 +128,9 @@ def delete_label(label_id: str) -> dict:
         if "Cannot delete" in error_msg or "system label" in error_msg.lower():
             return {"success": False, "error": "Cannot delete system labels"}
         return {"success": False, "error": error_msg}
+
+
+# ----- Label Background Operations -----
 
 
 def _apply_label_operation_background(
@@ -275,7 +301,16 @@ def _apply_label_operation_background(
 
 
 def apply_label_to_senders_background(label_id: str, senders: list[str]) -> None:
-    """Apply a label to all emails from specified senders (background task)."""
+    """Apply a label to all emails from specified senders.
+
+    Note:
+        This is a long-running background operation. Progress is
+        communicated via `state.label_operation_status`.
+
+    Args:
+        label_id: Gmail label ID to apply
+        senders: List of sender email addresses
+    """
     _apply_label_operation_background(
         label_id=label_id,
         senders=senders,
@@ -290,7 +325,16 @@ def apply_label_to_senders_background(label_id: str, senders: list[str]) -> None
 
 
 def remove_label_from_senders_background(label_id: str, senders: list[str]) -> None:
-    """Remove a label from all emails from specified senders (background task)."""
+    """Remove a label from all emails from specified senders.
+
+    Note:
+        This is a long-running background operation. Progress is
+        communicated via `state.label_operation_status`.
+
+    Args:
+        label_id: Gmail label ID to remove
+        senders: List of sender email addresses
+    """
     _apply_label_operation_background(
         label_id=label_id,
         senders=senders,

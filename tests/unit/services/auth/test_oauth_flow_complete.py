@@ -41,6 +41,7 @@ class TestSuccessfulOAuthFlow:
         mock_settings.oauth_host = "localhost"
 
         def exists_side_effect(path):
+            """Return True for credentials.json, False for token.json."""
             if "token.json" in str(path):
                 return False
             if "credentials.json" in str(path):
@@ -88,6 +89,7 @@ class TestSuccessfulOAuthFlow:
         mock_settings.oauth_host = "localhost"
 
         def exists_side_effect(path):
+            """Return True for credentials.json, False for token.json."""
             if "token.json" in str(path):
                 return False
             if "credentials.json" in str(path):
@@ -128,6 +130,7 @@ class TestSuccessfulOAuthFlow:
         mock_settings.oauth_host = "localhost"
 
         def exists_side_effect(path):
+            """Return True for credentials.json, False for token.json."""
             if "token.json" in str(path):
                 return False
             if "credentials.json" in str(path):
@@ -168,6 +171,7 @@ class TestSuccessfulOAuthFlow:
         mock_settings.oauth_host = "custom.example.com"
 
         def exists_side_effect(path):
+            """Return True for credentials.json, False for token.json."""
             if "token.json" in str(path):
                 return False
             if "credentials.json" in str(path):
@@ -219,6 +223,7 @@ class TestOAuthFlowErrors:
         mock_settings.oauth_host = "localhost"
 
         def exists_side_effect(path):
+            """Return True for credentials.json, False for token.json."""
             if "token.json" in str(path):
                 return False
             if "credentials.json" in str(path):
@@ -268,6 +273,7 @@ class TestOAuthFlowErrors:
         mock_settings.oauth_host = "localhost"
 
         def exists_side_effect(path):
+            """Return True for credentials.json, False for token.json."""
             if "token.json" in str(path):
                 return False
             if "credentials.json" in str(path):
@@ -315,6 +321,7 @@ class TestOAuthFlowErrors:
         mock_settings.oauth_host = "localhost"
 
         def exists_side_effect(path):
+            """Return True for credentials.json, False for token.json."""
             if "token.json" in str(path):
                 return False
             if "credentials.json" in str(path):

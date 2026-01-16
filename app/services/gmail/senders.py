@@ -31,20 +31,17 @@ from app.services.gmail.helpers import get_recipients_from_headers
 logger = logging.getLogger(__name__)
 
 
-# =============================================================================
-# VALID SENDERS MANAGEMENT
-# =============================================================================
+# ----- Valid Senders Management -----
 
 
 def add_valid_sender(sender_email: str) -> dict:
-    """
-    Add a sender to the valid senders whitelist.
+    """Add a sender to the valid senders whitelist.
 
-    **Args:**
-        - `sender_email`: The sender email to whitelist
+    Args:
+        sender_email: Email address to whitelist
 
-    **Returns:**
-        Dict with success status and current state
+    Returns:
+        Dict with keys: success, sender_email, is_valid, added (bool)
     """
     user = state.get_current_user()
     if not user.get("email"):
@@ -62,14 +59,13 @@ def add_valid_sender(sender_email: str) -> dict:
 
 
 def remove_valid_sender(sender_email: str) -> dict:
-    """
-    Remove a sender from the valid senders whitelist.
+    """Remove a sender from the valid senders whitelist.
 
-    **Args:**
-        - `sender_email`: The sender email to remove
+    Args:
+        sender_email: Email address to remove
 
-    **Returns:**
-        Dict with success status and current state
+    Returns:
+        Dict with keys: success, sender_email, is_valid, removed (bool)
     """
     user = state.get_current_user()
     if not user.get("email"):
@@ -87,10 +83,9 @@ def remove_valid_sender(sender_email: str) -> dict:
 
 
 def get_valid_senders() -> set[str]:
-    """
-    Get all valid senders for the current user.
+    """Get all valid senders for the current user.
 
-    **Returns:**
+    Returns:
         Set of whitelisted sender emails (lowercase)
     """
     user = state.get_current_user()
@@ -101,10 +96,9 @@ def get_valid_senders() -> set[str]:
 
 
 def get_valid_senders_list() -> list[dict]:
-    """
-    Get all valid senders with metadata for display.
+    """Get all valid senders with metadata for display.
 
-    **Returns:**
+    Returns:
         List of dicts with sender_email and created_at
     """
     user = state.get_current_user()
@@ -115,13 +109,12 @@ def get_valid_senders_list() -> list[dict]:
 
 
 def is_valid_sender(sender_email: str) -> bool:
-    """
-    Check if a sender is in the valid senders whitelist.
+    """Check if a sender is in the valid senders whitelist.
 
-    **Args:**
-        - `sender_email`: The sender email to check
+    Args:
+        sender_email: Email address to check
 
-    **Returns:**
+    Returns:
         True if sender is whitelisted
     """
     user = state.get_current_user()
@@ -131,16 +124,13 @@ def is_valid_sender(sender_email: str) -> bool:
     return db_is_valid_sender(user["email"], sender_email)
 
 
-# =============================================================================
-# MY RECIPIENTS MANAGEMENT
-# =============================================================================
+# ----- My Recipients Management -----
 
 
 def get_my_recipients() -> set[str]:
-    """
-    Get all recipients from sent mail for the current user.
+    """Get all recipients from sent mail for the current user.
 
-    **Returns:**
+    Returns:
         Set of recipient emails (lowercase)
     """
     user = state.get_current_user()
@@ -151,10 +141,9 @@ def get_my_recipients() -> set[str]:
 
 
 def get_my_recipients_list() -> list[dict]:
-    """
-    Get all recipients with metadata for display.
+    """Get all recipients with metadata for display.
 
-    **Returns:**
+    Returns:
         List of dicts with recipient_email and created_at
     """
     user = state.get_current_user()
@@ -165,12 +154,7 @@ def get_my_recipients_list() -> list[dict]:
 
 
 def get_my_recipients_count() -> int:
-    """
-    Get count of recipients for the current user.
-
-    **Returns:**
-        Number of recipients
-    """
+    """Get count of recipients for the current user."""
     user = state.get_current_user()
     if not user.get("email"):
         return 0
@@ -183,22 +167,19 @@ def get_recipients_scan_status() -> dict:
     return state.get_recipients_scan_status()
 
 
-# =============================================================================
-# RECIPIENT OVERRIDES MANAGEMENT
-# =============================================================================
+# ----- Recipient Overrides Management -----
 
 
 def add_recipient_override(sender_email: str) -> dict:
-    """
-    Add a sender to the recipient overrides list.
+    """Add a sender to the recipient overrides list.
 
     Marks a known recipient as deletable (overrides my_recipients protection).
 
-    **Args:**
-        - `sender_email`: The sender email to mark as deletable
+    Args:
+        sender_email: Email address to mark as deletable
 
-    **Returns:**
-        Dict with success status and current state
+    Returns:
+        Dict with keys: success, sender_email, is_override, added (bool)
     """
     user = state.get_current_user()
     if not user.get("email"):
@@ -216,14 +197,13 @@ def add_recipient_override(sender_email: str) -> dict:
 
 
 def remove_recipient_override(sender_email: str) -> dict:
-    """
-    Remove a sender from the recipient overrides list.
+    """Remove a sender from the recipient overrides list.
 
-    **Args:**
-        - `sender_email`: The sender email to remove from overrides
+    Args:
+        sender_email: Email address to remove from overrides
 
-    **Returns:**
-        Dict with success status and current state
+    Returns:
+        Dict with keys: success, sender_email, is_override, removed (bool)
     """
     user = state.get_current_user()
     if not user.get("email"):
@@ -241,10 +221,9 @@ def remove_recipient_override(sender_email: str) -> dict:
 
 
 def get_recipient_overrides() -> set[str]:
-    """
-    Get all recipient overrides for the current user.
+    """Get all recipient overrides for the current user.
 
-    **Returns:**
+    Returns:
         Set of sender emails marked as deletable (lowercase)
     """
     user = state.get_current_user()
@@ -255,10 +234,9 @@ def get_recipient_overrides() -> set[str]:
 
 
 def get_recipient_overrides_list() -> list[dict]:
-    """
-    Get all recipient overrides with metadata for display.
+    """Get all recipient overrides with metadata for display.
 
-    **Returns:**
+    Returns:
         List of dicts with sender_email and created_at
     """
     user = state.get_current_user()
@@ -268,20 +246,22 @@ def get_recipient_overrides_list() -> list[dict]:
     return db_get_recipient_overrides_list(user["email"])
 
 
-# =============================================================================
-# RECIPIENTS SCANNING
-# =============================================================================
+# ----- Recipients Scanning -----
 
 
-def scan_recipients_background(filters: Optional[dict] = None):
-    """
-    Scan sent mail and store recipients to database.
+def scan_recipients_background(filters: Optional[dict] = None) -> None:
+    """Scan sent mail and store recipients to database.
 
-    This is triggered automatically when the Delete Emails tab is selected.
-    It scans all sent emails and extracts recipients (To, Cc, Bcc).
+    Triggered automatically when the Delete Emails tab is selected.
+    Extracts all recipients (To, Cc, Bcc) from sent emails and stores
+    them in the database for the current user.
 
-    **Args:**
-        - `filters`: Optional filter options (not typically used for sent scan)
+    Note:
+        This is a long-running background operation. Progress is
+        communicated via `state.recipients_scan_status`.
+
+    Args:
+        filters: Optional filter options (not typically used)
     """
     user = state.get_current_user()
     if not user.get("email"):
@@ -352,6 +332,7 @@ def scan_recipients_background(filters: Optional[dict] = None):
         batch_size = 25  # Reduced from 100 to avoid "too many concurrent requests"
 
         def process_message(request_id, response, exception) -> None:
+            """Batch callback to extract recipients from sent email headers."""
             nonlocal processed
             processed += 1
 
@@ -370,7 +351,10 @@ def scan_recipients_background(filters: Optional[dict] = None):
             batch_failed: list[str] = []
 
             def make_callback(msg_id):
+                """Create a callback that captures msg_id for failure tracking."""
+
                 def callback(request_id, response, exception):
+                    """Batch callback to extract recipients, tracking failures by msg_id."""
                     nonlocal processed
                     processed += 1
                     if exception:

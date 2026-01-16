@@ -351,7 +351,10 @@ class TestBuildGmailQuery:
         """Should handle Pydantic model with model_dump method."""
 
         class MockFiltersModel:
+            """Mock Pydantic model for testing filter handling."""
+
             def model_dump(self, exclude_none=False):
+                """Return model as dictionary."""
                 return {"older_than": "7d", "category": "updates"}
 
         filters = MockFiltersModel()

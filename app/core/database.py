@@ -20,9 +20,11 @@ _init_lock = threading.Lock()
 _initialized = False
 
 
+# ----- Connection Management -----
+
+
 def get_db_path() -> str:
-    """
-    Get the database file path.
+    """Get the database file path.
 
     Returns /app/data/gmail_cleaner.db in Docker environments,
     otherwise returns data/gmail_cleaner.db relative to working directory.
@@ -37,8 +39,7 @@ def get_db_path() -> str:
 
 
 def get_connection() -> sqlite3.Connection:
-    """
-    Get a thread-local database connection.
+    """Get a thread-local database connection.
 
     Uses check_same_thread=False for thread safety and enables
     foreign keys and WAL mode for better performance.
@@ -55,8 +56,7 @@ def get_connection() -> sqlite3.Connection:
 
 @contextmanager
 def get_db() -> Generator[sqlite3.Connection, None, None]:
-    """
-    Context manager for database operations.
+    """Context manager for database operations.
 
     Yields a database connection and handles commit/rollback automatically.
     """
@@ -70,8 +70,7 @@ def get_db() -> Generator[sqlite3.Connection, None, None]:
 
 
 def init_database() -> None:
-    """
-    Initialize the database schema.
+    """Initialize the database schema.
 
     Creates tables if they don't exist. Thread-safe and idempotent.
     """
@@ -126,18 +125,17 @@ def init_database() -> None:
         _initialized = True
 
 
-# --- Valid Senders CRUD ---
+# ----- Valid Senders CRUD -----
 
 
 def add_valid_sender(user_email: str, sender_email: str) -> bool:
-    """
-    Add a sender to the valid senders whitelist.
+    """Add a sender to the valid senders whitelist.
 
-    **Args:**
-        - `user_email`: The Gmail account email
-        - `sender_email`: The sender email to whitelist
+    Args:
+        user_email: The Gmail account email
+        sender_email: The sender email to whitelist
 
-    **Returns:**
+    Returns:
         True if added, False if already exists
     """
     user_email = user_email.lower().strip()
@@ -155,14 +153,13 @@ def add_valid_sender(user_email: str, sender_email: str) -> bool:
 
 
 def remove_valid_sender(user_email: str, sender_email: str) -> bool:
-    """
-    Remove a sender from the valid senders whitelist.
+    """Remove a sender from the valid senders whitelist.
 
-    **Args:**
-        - `user_email`: The Gmail account email
-        - `sender_email`: The sender email to remove
+    Args:
+        user_email: The Gmail account email
+        sender_email: The sender email to remove
 
-    **Returns:**
+    Returns:
         True if removed, False if not found
     """
     user_email = user_email.lower().strip()
@@ -177,13 +174,12 @@ def remove_valid_sender(user_email: str, sender_email: str) -> bool:
 
 
 def get_valid_senders(user_email: str) -> set[str]:
-    """
-    Get all valid senders for a user.
+    """Get all valid senders for a user.
 
-    **Args:**
-        - `user_email`: The Gmail account email
+    Args:
+        user_email: The Gmail account email
 
-    **Returns:**
+    Returns:
         Set of whitelisted sender emails (lowercase)
     """
     user_email = user_email.lower().strip()
@@ -197,13 +193,12 @@ def get_valid_senders(user_email: str) -> set[str]:
 
 
 def get_valid_senders_list(user_email: str) -> list[dict]:
-    """
-    Get all valid senders with metadata for display.
+    """Get all valid senders with metadata for display.
 
-    **Args:**
-        - `user_email`: The Gmail account email
+    Args:
+        user_email: The Gmail account email
 
-    **Returns:**
+    Returns:
         List of dicts with sender_email and created_at
     """
     user_email = user_email.lower().strip()
@@ -221,14 +216,13 @@ def get_valid_senders_list(user_email: str) -> list[dict]:
 
 
 def is_valid_sender(user_email: str, sender_email: str) -> bool:
-    """
-    Check if a sender is in the valid senders whitelist.
+    """Check if a sender is in the valid senders whitelist.
 
-    **Args:**
-        - `user_email`: The Gmail account email
-        - `sender_email`: The sender email to check
+    Args:
+        user_email: The Gmail account email
+        sender_email: The sender email to check
 
-    **Returns:**
+    Returns:
         True if sender is whitelisted
     """
     user_email = user_email.lower().strip()
@@ -242,20 +236,19 @@ def is_valid_sender(user_email: str, sender_email: str) -> bool:
         return cursor.fetchone() is not None
 
 
-# --- My Recipients CRUD ---
+# ----- My Recipients CRUD -----
 
 
 def sync_recipients(user_email: str, recipients: set[str]) -> int:
-    """
-    Sync recipients from sent mail scan to database.
+    """Sync recipients from sent mail scan to database.
 
     Uses INSERT OR IGNORE for idempotent upserts.
 
-    **Args:**
-        - `user_email`: The Gmail account email
-        - `recipients`: Set of recipient emails to add
+    Args:
+        user_email: The Gmail account email
+        recipients: Set of recipient emails to add
 
-    **Returns:**
+    Returns:
         Number of new recipients added
     """
     user_email = user_email.lower().strip()
@@ -279,13 +272,12 @@ def sync_recipients(user_email: str, recipients: set[str]) -> int:
 
 
 def get_my_recipients(user_email: str) -> set[str]:
-    """
-    Get all recipients for a user.
+    """Get all recipients for a user.
 
-    **Args:**
-        - `user_email`: The Gmail account email
+    Args:
+        user_email: The Gmail account email
 
-    **Returns:**
+    Returns:
         Set of recipient emails (lowercase)
     """
     user_email = user_email.lower().strip()
@@ -299,13 +291,12 @@ def get_my_recipients(user_email: str) -> set[str]:
 
 
 def get_my_recipients_list(user_email: str) -> list[dict]:
-    """
-    Get all recipients with metadata for display.
+    """Get all recipients with metadata for display.
 
-    **Args:**
-        - `user_email`: The Gmail account email
+    Args:
+        user_email: The Gmail account email
 
-    **Returns:**
+    Returns:
         List of dicts with recipient_email and created_at
     """
     user_email = user_email.lower().strip()
@@ -323,14 +314,10 @@ def get_my_recipients_list(user_email: str) -> list[dict]:
 
 
 def get_my_recipients_count(user_email: str) -> int:
-    """
-    Get count of recipients for a user.
+    """Get count of recipients for a user.
 
-    **Args:**
-        - `user_email`: The Gmail account email
-
-    **Returns:**
-        Number of recipients
+    Args:
+        user_email: The Gmail account email
     """
     user_email = user_email.lower().strip()
 
@@ -343,13 +330,12 @@ def get_my_recipients_count(user_email: str) -> int:
 
 
 def clear_my_recipients(user_email: str) -> int:
-    """
-    Clear all recipients for a user (used before rescan).
+    """Clear all recipients for a user (used before rescan).
 
-    **Args:**
-        - `user_email`: The Gmail account email
+    Args:
+        user_email: The Gmail account email
 
-    **Returns:**
+    Returns:
         Number of recipients cleared
     """
     user_email = user_email.lower().strip()
@@ -362,20 +348,19 @@ def clear_my_recipients(user_email: str) -> int:
         return cursor.rowcount
 
 
-# --- Recipient Overrides CRUD ---
+# ----- Recipient Overrides CRUD -----
 
 
 def add_recipient_override(user_email: str, sender_email: str) -> bool:
-    """
-    Add a sender to the recipient overrides list.
+    """Add a sender to the recipient overrides list.
 
     Marks a known recipient as deletable (overrides my_recipients protection).
 
-    **Args:**
-        - `user_email`: The Gmail account email
-        - `sender_email`: The sender email to mark as deletable
+    Args:
+        user_email: The Gmail account email
+        sender_email: The sender email to mark as deletable
 
-    **Returns:**
+    Returns:
         True if added, False if already exists
     """
     user_email = user_email.lower().strip()
@@ -393,14 +378,13 @@ def add_recipient_override(user_email: str, sender_email: str) -> bool:
 
 
 def remove_recipient_override(user_email: str, sender_email: str) -> bool:
-    """
-    Remove a sender from the recipient overrides list.
+    """Remove a sender from the recipient overrides list.
 
-    **Args:**
-        - `user_email`: The Gmail account email
-        - `sender_email`: The sender email to remove from overrides
+    Args:
+        user_email: The Gmail account email
+        sender_email: The sender email to remove from overrides
 
-    **Returns:**
+    Returns:
         True if removed, False if not found
     """
     user_email = user_email.lower().strip()
@@ -415,13 +399,12 @@ def remove_recipient_override(user_email: str, sender_email: str) -> bool:
 
 
 def get_recipient_overrides(user_email: str) -> set[str]:
-    """
-    Get all recipient overrides for a user.
+    """Get all recipient overrides for a user.
 
-    **Args:**
-        - `user_email`: The Gmail account email
+    Args:
+        user_email: The Gmail account email
 
-    **Returns:**
+    Returns:
         Set of sender emails marked as deletable (lowercase)
     """
     user_email = user_email.lower().strip()
@@ -435,13 +418,12 @@ def get_recipient_overrides(user_email: str) -> set[str]:
 
 
 def get_recipient_overrides_list(user_email: str) -> list[dict]:
-    """
-    Get all recipient overrides with metadata for display.
+    """Get all recipient overrides with metadata for display.
 
-    **Args:**
-        - `user_email`: The Gmail account email
+    Args:
+        user_email: The Gmail account email
 
-    **Returns:**
+    Returns:
         List of dicts with sender_email and created_at
     """
     user_email = user_email.lower().strip()
@@ -459,14 +441,13 @@ def get_recipient_overrides_list(user_email: str) -> list[dict]:
 
 
 def is_recipient_override(user_email: str, sender_email: str) -> bool:
-    """
-    Check if a sender is in the recipient overrides list.
+    """Check if a sender is in the recipient overrides list.
 
-    **Args:**
-        - `user_email`: The Gmail account email
-        - `sender_email`: The sender email to check
+    Args:
+        user_email: The Gmail account email
+        sender_email: The sender email to check
 
-    **Returns:**
+    Returns:
         True if sender is marked as deletable override
     """
     user_email = user_email.lower().strip()

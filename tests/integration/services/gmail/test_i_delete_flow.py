@@ -140,10 +140,12 @@ class TestScanToDeleteFlow:
         ]
 
         def mock_new_batch(callback):
+            """Create mock batch that invokes callback for each message."""
             batch = Mock()
             batch.add = Mock()
 
             def execute_batch():
+                """Execute batch by calling callback for each mock message."""
                 for i, msg in enumerate(messages):
                     callback(str(i), msg, None)
 
@@ -172,10 +174,12 @@ class TestScanToDeleteFlow:
         )
 
         def mock_new_batch(callback):
+            """Create mock batch that invokes callback for each message."""
             batch = Mock()
             batch.add = Mock()
 
             def execute_batch():
+                """Execute batch by calling callback for each mock message."""
                 for i, msg in enumerate(messages):
                     callback(str(i), msg, None)
 
@@ -216,10 +220,12 @@ class TestUnknownSendersFlow:
         call_counter = [0]
 
         def mock_new_batch(callback):
+            """Create mock batch that invokes callback for each message."""
             batch = Mock()
             batch.add = Mock()
 
             def execute_batch():
+                """Execute batch with sent messages first, then inbox."""
                 # First call is for sent messages, second for inbox
                 messages = (
                     SENT_EMAIL_MESSAGES
@@ -302,10 +308,12 @@ class TestUnknownSendersFlow:
         )
 
         def mock_new_batch(callback):
+            """Create mock batch that invokes callback for each message."""
             batch = Mock()
             batch.add = Mock()
 
             def execute_batch():
+                """Execute batch by calling callback for each mock message."""
                 for i, msg in enumerate(inbox_messages):
                     callback(str(i), msg, None)
 
@@ -623,10 +631,12 @@ class TestDeleteByDomainFlow:
         )
 
         def mock_new_batch(callback):
+            """Create mock batch that invokes callback for each message."""
             batch = Mock()
             batch.add = Mock()
 
             def execute_batch():
+                """Execute batch by calling callback for each mock message."""
                 for i, msg in enumerate(messages):
                     callback(str(i), msg, None)
 

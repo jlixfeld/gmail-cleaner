@@ -5,6 +5,9 @@
 window.GmailCleaner = window.GmailCleaner || {};
 
 GmailCleaner.UI = {
+    /**
+     * Sets up click handlers for navigation items and initializes active view.
+     */
     setupNavigation() {
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', (e) => {
@@ -23,7 +26,10 @@ GmailCleaner.UI = {
         }
     },
 
-    // Initialize view-specific features without switching tabs
+    /**
+     * Initializes view-specific features without switching tabs.
+     * @param {string} viewName - The view to initialize.
+     */
     initializeView(viewName) {
         if (viewName === 'delete' && GmailCleaner.Delete) {
             // Load any existing scan results
@@ -37,6 +43,10 @@ GmailCleaner.UI = {
         }
     },
 
+    /**
+     * Shows specified view, hides others, and updates navigation state.
+     * @param {string} viewName - The view to display.
+     */
     showView(viewName) {
         GmailCleaner.currentView = viewName;
 
@@ -102,13 +112,22 @@ GmailCleaner.UI = {
         }
     },
 
+    /**
+     * Escapes HTML special characters to prevent XSS.
+     * @param {string} text - The text to escape.
+     * @returns {string} HTML-safe escaped text.
+     */
     escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text || '';
         return div.innerHTML;
     },
 
-    // Format bytes to human-readable size
+    /**
+     * Formats bytes to human-readable size (B, KB, MB, GB).
+     * @param {number} bytes - The byte count to format.
+     * @returns {string} Formatted size string or empty string if 0.
+     */
     formatSize(bytes) {
         if (!bytes || bytes === 0) return '';
         const units = ['B', 'KB', 'MB', 'GB'];
@@ -121,12 +140,21 @@ GmailCleaner.UI = {
         return size.toFixed(unitIndex > 0 ? 1 : 0) + ' ' + units[unitIndex];
     },
 
+    /**
+     * Toggles sidebar visibility on mobile devices.
+     */
     toggleSidebar() {
         const sidebar = document.getElementById('sidebar');
         sidebar.classList.toggle('open');
     },
 
-    // Toast notification system
+    /**
+     * Displays a toast notification with auto-dismiss.
+     * @param {string} message - The main message to display.
+     * @param {string} type - Toast type: 'success', 'error', or 'info'.
+     * @param {number} duration - Display duration in milliseconds.
+     * @param {string|null} tip - Optional secondary tip message.
+     */
     showToast(message, type = 'success', duration = 5000, tip = null) {
         // Create toast container if it doesn't exist
         let container = document.getElementById('toastContainer');
@@ -171,15 +199,17 @@ GmailCleaner.UI = {
         }, duration);
     },
 
-    // Convenience methods
+    /** Shows a green success toast. */
     showSuccessToast(message, tip = null) {
         this.showToast(message, 'success', 5000, tip);
     },
 
+    /** Shows a red error toast with longer duration. */
     showErrorToast(message) {
         this.showToast(message, 'error', 6000);
     },
 
+    /** Shows a blue info toast. */
     showInfoToast(message) {
         this.showToast(message, 'info', 4000);
     }

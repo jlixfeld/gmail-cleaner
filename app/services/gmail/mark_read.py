@@ -32,12 +32,19 @@ def get_unread_count() -> dict:
         return {"count": 0, "error": str(e)}
 
 
-def mark_emails_as_read(count: int = 100, filters: Optional[dict] = None):
+def mark_emails_as_read(count: int = 100, filters: Optional[dict] = None) -> None:
     """Mark unread emails as read.
 
+    Processes in batches (100 per API call) and pages through results.
+    Uses memory-efficient pagination to handle large mailboxes.
+
+    Note:
+        This is a long-running operation. Progress is communicated via
+        `state.mark_read_status` which should be polled by the caller.
+
     Args:
-        count: Number of emails to mark. Use 0 to mark ALL unread emails.
-        filters: Optional filters to apply.
+        count: Number of emails to mark. 0 means mark ALL unread emails.
+        filters: Gmail filter dict (older_than, after_date, before_date, etc.)
     """
     # Validate input
     if count < 0:

@@ -7,6 +7,9 @@ window.GmailCleaner = window.GmailCleaner || {};
 GmailCleaner.Filters = {
     litepicker: null,
 
+    /**
+     * Sets up filter controls including date range picker and clear button.
+     */
     setup() {
         const clearBtn = document.getElementById('filterClearBtn');
         if (clearBtn) {
@@ -23,6 +26,9 @@ GmailCleaner.Filters = {
         }
     },
 
+    /**
+     * Initializes Litepicker date range widget with 7-day default window.
+     */
     setupDateRangePicker() {
         const dateRangeInput = document.getElementById('dateRangePicker');
         if (!dateRangeInput || !window.Litepicker) return;
@@ -76,6 +82,10 @@ GmailCleaner.Filters = {
         }
     },
 
+    /**
+     * Handles "Older than" dropdown change - shows/hides custom date picker.
+     * @param {Event} event - The change event from the select element.
+     */
     handleOlderThanChange(event) {
         const value = event.target.value;
         const dateRangeGroup = document.getElementById('dateRangeGroup');
@@ -94,6 +104,10 @@ GmailCleaner.Filters = {
         }
     },
 
+    /**
+     * Collects current filter values for API requests.
+     * @returns {Object} Filter object with older_than, after_date, before_date, etc.
+     */
     get() {
         const olderThanSelect = document.getElementById('filterOlderThan');
         const olderThanValue = olderThanSelect?.value || '';
@@ -146,6 +160,9 @@ GmailCleaner.Filters = {
         };
     },
 
+    /**
+     * Resets all filter inputs to default values.
+     */
     clear() {
         const olderThan = document.getElementById('filterOlderThan');
         const largerThan = document.getElementById('filterLargerThan');
@@ -171,6 +188,10 @@ GmailCleaner.Filters = {
         }
     },
 
+    /**
+     * Populates the label filter dropdown with user's Gmail labels.
+     * @param {Array} labels - Array of label objects with name property.
+     */
     populateLabelDropdown(labels) {
         const select = document.getElementById('filterLabel');
         if (!select) return;
@@ -189,6 +210,10 @@ GmailCleaner.Filters = {
         }
     },
 
+    /**
+     * Shows or hides the filter bar and adjusts main content spacing.
+     * @param {boolean} show - Whether to show the filter bar.
+     */
     showBar(show) {
         const filterBar = document.getElementById('filterBar');
         const mainContent = document.querySelector('.main-content');

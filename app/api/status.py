@@ -45,6 +45,9 @@ router = APIRouter(prefix="/api", tags=["Status"])
 logger = logging.getLogger(__name__)
 
 
+# ----- Scan & Unsubscribe Endpoints -----
+
+
 @router.get("/status")
 @limiter.limit(STATUS_RATE_LIMIT)
 async def api_status(request: Request):
@@ -71,6 +74,9 @@ async def api_results(request: Request):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get scan results",
         ) from e
+
+
+# ----- Authentication Endpoints -----
 
 
 @router.get("/auth-status")
@@ -101,6 +107,9 @@ async def api_web_auth_status(request: Request):
         ) from e
 
 
+# ----- Mark Read Endpoints -----
+
+
 @router.get("/unread-count")
 @limiter.limit(STATUS_RATE_LIMIT)
 async def api_unread_count(request: Request):
@@ -127,6 +136,9 @@ async def api_mark_read_status(request: Request):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get mark-read status",
         ) from e
+
+
+# ----- Delete Scan Endpoints -----
 
 
 @router.get("/delete-scan-status")

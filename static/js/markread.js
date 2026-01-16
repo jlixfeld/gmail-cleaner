@@ -5,6 +5,7 @@
 window.GmailCleaner = window.GmailCleaner || {};
 
 GmailCleaner.MarkRead = {
+    /** Fetches and displays current unread email count. */
     async refreshUnreadCount() {
         const countEl = document.querySelector('#unreadCount .count-number');
         countEl.textContent = '...';
@@ -23,6 +24,7 @@ GmailCleaner.MarkRead = {
         }
     },
 
+    /** Starts mark-as-read operation with selected count and filters. */
     async start() {
         const btn = document.getElementById('markReadBtn');
         const progressCard = document.getElementById('markReadProgressCard');
@@ -62,6 +64,7 @@ GmailCleaner.MarkRead = {
         }
     },
 
+    /** Polls mark-as-read progress and updates UI until complete. */
     async pollProgress() {
         try {
             const response = await fetch('/api/mark-read-status');
@@ -96,6 +99,7 @@ GmailCleaner.MarkRead = {
         }
     },
 
+    /** Resets mark-as-read button to default state. */
     resetButton() {
         const btn = document.getElementById('markReadBtn');
         btn.disabled = false;

@@ -18,6 +18,9 @@ import tldextract
 COMPOUND_TLDS = {"co.uk", "com.au", "co.nz", "co.jp", "co.kr", "com.br", "com.mx"}
 
 
+# ----- Domain Extraction -----
+
+
 def get_registrable_domain(domain: str) -> str:
     """Extract registrable domain, stripping subdomains.
 
@@ -181,6 +184,9 @@ def extract_original_email_from_apple_relay(email: str) -> str | None:
     return f"{local_part}@{fqdn}"
 
 
+# ----- Security & Validation -----
+
+
 def sanitize_gmail_query_value(value: str) -> str:
     """Sanitize a value for safe use in Gmail search queries.
 
@@ -290,6 +296,9 @@ def validate_unsafe_url(url: str) -> str:
     return url
 
 
+# ----- Gmail Query Building -----
+
+
 def build_gmail_query(filters: Optional[Union[dict, Any]] = None) -> str:
     """Build Gmail search query from filter parameters.
 
@@ -346,10 +355,10 @@ def build_delete_scan_query(filters: Optional[Union[dict, Any]] = None) -> str:
 
     Excludes sent, trash, and spam folders by default.
 
-    **Args:**
-        - `filters`: Optional dict with filter parameters (same as build_gmail_query)
+    Args:
+        filters: Optional dict with filter parameters (same as build_gmail_query)
 
-    **Returns:**
+    Returns:
         Gmail query string with default exclusions
     """
     base_query = build_gmail_query(filters)
@@ -360,8 +369,21 @@ def build_delete_scan_query(filters: Optional[Union[dict, Any]] = None) -> str:
     return exclusions
 
 
+# ----- Email Header Parsing -----
+
+
 def get_unsubscribe_from_headers(headers: list) -> tuple[Optional[str], Optional[str]]:
-    """Extract unsubscribe link from email headers."""
+    """Extract unsubscribe link from List-Unsubscribe header.
+
+    Prioritizes one-click unsubscribe (RFC 8058) when List-Unsubscribe-Post
+    header is present, falls back to manual HTTP links, then mailto: links.
+
+    Args:
+        headers: List of email header dicts with 'name' and 'value' keys
+
+    Returns:
+        Tuple of (url, method) where method is 'one-click', 'manual', or None
+    """
     for header in headers:
         if header["name"].lower() == "list-unsubscribe":
             value = header["value"]

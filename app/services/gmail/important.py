@@ -10,7 +10,19 @@ from app.services.gmail.helpers import sanitize_gmail_query_value
 
 
 def mark_important_background(senders: list[str], *, important: bool = True) -> None:
-    """Mark/unmark emails from selected senders as important."""
+    """Mark or unmark emails from selected senders as important.
+
+    Queries Gmail for all emails from each sender and adds/removes
+    the IMPORTANT label.
+
+    Note:
+        This is a long-running background operation. Progress is
+        communicated via `state.important_status`.
+
+    Args:
+        senders: List of sender email addresses
+        important: True to mark as important, False to unmark
+    """
     state.reset_important()
 
     # Validate input

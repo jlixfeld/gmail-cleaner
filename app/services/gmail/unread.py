@@ -19,6 +19,9 @@ from app.services.gmail.helpers import (
 )
 
 
+# ----- Helpers -----
+
+
 def _parse_email_date(date_str: str | None) -> datetime | None:
     """Parse email date string to datetime, handling various formats.
 
@@ -39,15 +42,25 @@ def _parse_email_date(date_str: str | None) -> datetime | None:
 logger = logging.getLogger(__name__)
 
 
+# ----- Unread Scan Operations -----
+
+
 def scan_unread_by_sender(
     limit: int = 1000, filters: Optional[dict] = None, inbox_only: bool = True
-):
+) -> None:
     """Scan unread emails and group by sender.
 
+    Stores message IDs in results so bulk actions can reference them directly
+    without re-querying Gmail.
+
+    Note:
+        This is a long-running operation. Progress is communicated via
+        `state.unread_scan_status` which should be polled by the caller.
+
     Args:
-        limit: Maximum emails to scan. 0 = scan all (no limit).
-        filters: Optional filter dict (older_than, larger_than, category, sender, label)
-        inbox_only: If True, use "is:unread in:inbox", otherwise "is:unread"
+        limit: Maximum emails to scan. 0 means scan all.
+        filters: Gmail filter dict (older_than, larger_than, category, sender, label)
+        inbox_only: If True, only scan inbox; if False, scan all unread emails
     """
     # Validate input - negative values are invalid, 0 means "scan all"
     if limit < 0:
@@ -126,6 +139,7 @@ def scan_unread_by_sender(
         batch_size = 100
 
         def process_message(request_id, response, exception) -> None:
+            """Batch callback to extract unread email info and group by sender."""
             nonlocal processed
             processed += 1
 
@@ -222,6 +236,9 @@ def get_unread_scan_results() -> list:
 def get_unread_action_status() -> dict:
     """Get unread action (mark read/archive) status."""
     return state.get_unread_action_status()
+
+
+# ----- Unread Action Operations -----
 
 
 def mark_read_by_senders_background(senders: list[str]) -> None:

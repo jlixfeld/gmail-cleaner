@@ -28,6 +28,7 @@ from app.main import app  # noqa: E402
 
 
 def main():
+    """Application entry point. Validates credentials and starts the server."""
     print("=" * 60)
     print(f"{settings.app_name}")
     print("=" * 60)

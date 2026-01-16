@@ -10,6 +10,10 @@ GmailCleaner.Labels = {
         user: []
     },
 
+    /**
+     * Loads all Gmail labels from server into local cache.
+     * @returns {Object|null} Labels object with system/user arrays, or null on error.
+     */
     async loadLabels() {
         try {
             const response = await fetch('/api/labels');
@@ -29,6 +33,11 @@ GmailCleaner.Labels = {
         }
     },
 
+    /**
+     * Creates a new Gmail label and adds it to local cache.
+     * @param {string} name - The label name to create.
+     * @returns {Object} Result with success boolean and label or error.
+     */
     async createLabel(name) {
         try {
             const response = await fetch('/api/labels', {
@@ -50,6 +59,11 @@ GmailCleaner.Labels = {
         }
     },
 
+    /**
+     * Deletes a Gmail label and removes it from local cache.
+     * @param {string} labelId - The label ID to delete.
+     * @returns {Object} Result with success boolean or error.
+     */
     async deleteLabel(labelId) {
         try {
             const response = await fetch(`/api/labels/${encodeURIComponent(labelId)}`, {
@@ -68,6 +82,12 @@ GmailCleaner.Labels = {
         }
     },
 
+    /**
+     * Applies a label to all emails from specified senders.
+     * @param {string} labelId - The label ID to apply.
+     * @param {string[]} senders - Array of sender email addresses.
+     * @returns {Object} Result with status or error.
+     */
     async applyLabelToSenders(labelId, senders) {
         try {
             const response = await fetch('/api/apply-label', {
@@ -81,6 +101,12 @@ GmailCleaner.Labels = {
         }
     },
 
+    /**
+     * Removes a label from all emails from specified senders.
+     * @param {string} labelId - The label ID to remove.
+     * @param {string[]} senders - Array of sender email addresses.
+     * @returns {Object} Result with status or error.
+     */
     async removeLabelFromSenders(labelId, senders) {
         try {
             const response = await fetch('/api/remove-label', {
@@ -94,6 +120,10 @@ GmailCleaner.Labels = {
         }
     },
 
+    /**
+     * Polls label operation status until complete, then calls callback.
+     * @param {Function} onComplete - Callback invoked with final status.
+     */
     async pollLabelOperation(onComplete) {
         try {
             const response = await fetch('/api/label-operation-status');
@@ -111,7 +141,11 @@ GmailCleaner.Labels = {
         }
     },
 
-    // Show label dropdown for selecting/creating labels
+    /**
+     * Shows dropdown for selecting or creating labels.
+     * @param {HTMLElement} buttonElement - Button that triggered the dropdown.
+     * @param {Function} onSelect - Callback with selected/created label.
+     */
     showLabelDropdown(buttonElement, onSelect) {
         // Remove any existing dropdown
         this.hideLabelDropdown();
@@ -209,6 +243,7 @@ GmailCleaner.Labels = {
         }, 10);
     },
 
+    /** Hides and removes the label dropdown from DOM. */
     hideLabelDropdown() {
         const dropdown = document.getElementById('labelDropdown');
         if (dropdown) {
@@ -220,7 +255,12 @@ GmailCleaner.Labels = {
         }
     },
 
-    // Show label operation overlay
+    /**
+     * Shows progress overlay during label operations.
+     * @param {string} action - Operation type: 'apply' or 'remove'.
+     * @param {string} labelName - Name of the label being processed.
+     * @param {number} emailCount - Number of emails being processed.
+     */
     showLabelOverlay(action, labelName, emailCount) {
         this.hideLabelOverlay();
 
@@ -243,6 +283,7 @@ GmailCleaner.Labels = {
         document.body.appendChild(overlay);
     },
 
+    /** Updates label overlay progress bar and text. */
     updateLabelOverlay(status) {
         const progressBar = document.getElementById('labelProgressBar');
         const progressText = document.getElementById('labelProgressText');
@@ -255,6 +296,7 @@ GmailCleaner.Labels = {
         }
     },
 
+    /** Removes label operation overlay from DOM. */
     hideLabelOverlay() {
         const overlay = document.getElementById('labelOverlay');
         if (overlay) {
@@ -262,7 +304,7 @@ GmailCleaner.Labels = {
         }
     },
 
-    // Show apply label dropdown
+    /** Shows label dropdown for applying labels to selected senders. */
     async showApplyLabelDropdown(event) {
         event.stopPropagation();
 
@@ -283,7 +325,7 @@ GmailCleaner.Labels = {
         });
     },
 
-    // Show remove label dropdown
+    /** Shows label dropdown for removing labels from selected senders. */
     async showRemoveLabelDropdown(event) {
         event.stopPropagation();
 
@@ -304,7 +346,7 @@ GmailCleaner.Labels = {
         });
     },
 
-    // Apply label to selected senders
+    /** Applies label to emails from all selected senders with progress. */
     async applyLabelToSelected(label) {
         const checkboxes = document.querySelectorAll('.delete-cb:checked');
         const senders = [];
@@ -341,7 +383,7 @@ GmailCleaner.Labels = {
         }
     },
 
-    // Remove label from selected senders
+    /** Removes label from emails from all selected senders with progress. */
     async removeLabelFromSelected(label) {
         const checkboxes = document.querySelectorAll('.delete-cb:checked');
         const senders = [];
@@ -378,7 +420,7 @@ GmailCleaner.Labels = {
         }
     },
 
-    // Archive selected senders' emails
+    /** Archives emails from all selected senders (removes from inbox). */
     async archiveSelected() {
         const checkboxes = document.querySelectorAll('.delete-cb:checked');
         if (checkboxes.length === 0) {
@@ -421,6 +463,7 @@ GmailCleaner.Labels = {
         }
     },
 
+    /** Polls archive operation status until complete. */
     async pollArchiveStatus() {
         try {
             const response = await fetch('/api/archive-status');
@@ -443,6 +486,7 @@ GmailCleaner.Labels = {
         }
     },
 
+    /** Shows archive operation progress overlay. */
     showArchiveOverlay(senderCount) {
         this.hideLabelOverlay();
         this.hideArchiveOverlay();
@@ -466,6 +510,7 @@ GmailCleaner.Labels = {
         document.body.appendChild(overlay);
     },
 
+    /** Updates archive overlay progress bar and text. */
     updateArchiveOverlay(status) {
         const progressBar = document.getElementById('archiveProgressBar');
         const progressText = document.getElementById('archiveProgressText');
@@ -478,6 +523,7 @@ GmailCleaner.Labels = {
         }
     },
 
+    /** Removes archive overlay from DOM. */
     hideArchiveOverlay() {
         const overlay = document.getElementById('archiveOverlay');
         if (overlay) {
@@ -485,7 +531,7 @@ GmailCleaner.Labels = {
         }
     },
 
-    // Mark selected senders' emails as important
+    /** Marks emails from all selected senders as important. */
     async markImportantSelected() {
         const checkboxes = document.querySelectorAll('.delete-cb:checked');
         if (checkboxes.length === 0) {
@@ -528,6 +574,7 @@ GmailCleaner.Labels = {
         }
     },
 
+    /** Polls mark-important operation status until complete. */
     async pollImportantStatus() {
         try {
             const response = await fetch('/api/important-status');
@@ -550,6 +597,7 @@ GmailCleaner.Labels = {
         }
     },
 
+    /** Shows mark-important operation progress overlay. */
     showImportantOverlay(senderCount) {
         this.hideLabelOverlay();
         this.hideArchiveOverlay();
@@ -574,6 +622,7 @@ GmailCleaner.Labels = {
         document.body.appendChild(overlay);
     },
 
+    /** Updates mark-important overlay progress bar and text. */
     updateImportantOverlay(status) {
         const progressBar = document.getElementById('importantProgressBar');
         const progressText = document.getElementById('importantProgressText');
@@ -586,6 +635,7 @@ GmailCleaner.Labels = {
         }
     },
 
+    /** Removes mark-important overlay from DOM. */
     hideImportantOverlay() {
         const overlay = document.getElementById('importantOverlay');
         if (overlay) {

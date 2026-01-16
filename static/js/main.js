@@ -20,7 +20,10 @@ window.GmailCleaner = {
   },
 };
 
-// Handle limit input warning - shows warning when value is 0 (scan all)
+/**
+ * Shows/hides warning when limit input is 0 (scan all emails).
+ * @param {string} inputId - The ID of the limit input element.
+ */
 function handleLimitWarning(inputId) {
   const input = document.getElementById(inputId);
   const warning = document.getElementById(inputId + "Warning");
@@ -35,7 +38,11 @@ function handleLimitWarning(inputId) {
   }
 }
 
-// Get limit value - returns the numeric value (0 means scan all)
+/**
+ * Gets the numeric limit value from an input, defaulting to 500 if invalid.
+ * @param {string} inputId - The ID of the limit input element.
+ * @returns {number} The limit value (0 means scan all).
+ */
 function getLimitValue(inputId) {
   const input = document.getElementById(inputId);
   const value = parseInt(input.value);
@@ -44,7 +51,12 @@ function getLimitValue(inputId) {
     : value;
 }
 
-// Sort results by date (last_date field)
+/**
+ * Sorts results array by last_date field.
+ * @param {Array} results - The results array to sort.
+ * @param {string} order - Sort order: 'desc' or 'asc'.
+ * @returns {Array} New sorted array.
+ */
 function sortResultsByDate(results, order) {
   return [...results].sort((a, b) => {
     const dateA = a.last_date ? new Date(a.last_date) : new Date(0);
@@ -53,7 +65,10 @@ function sortResultsByDate(results, order) {
   });
 }
 
-// Toggle sort order and update UI
+/**
+ * Toggles sort order between ascending/descending and re-displays results.
+ * @param {string} type - Result type: 'subscription', 'delete', or 'unread'.
+ */
 function toggleSortOrder(type) {
   const currentOrder = GmailCleaner.sortOrder[type];
   GmailCleaner.sortOrder[type] = currentOrder === "desc" ? "asc" : "desc";
@@ -69,7 +84,10 @@ function toggleSortOrder(type) {
   }
 }
 
-// Toggle sort by field (date vs count) for delete tab
+/**
+ * Toggles sort field (date/count) for delete tab, or toggles order if same field.
+ * @param {string} sortBy - Sort field: 'date' or 'count'.
+ */
 function toggleDeleteSortBy(sortBy) {
   const currentSortBy = GmailCleaner.sortBy.delete;
 
@@ -85,7 +103,9 @@ function toggleDeleteSortBy(sortBy) {
   }
 }
 
-// Update delete sort button active states
+/**
+ * Updates visual state of delete tab sort buttons based on current sort settings.
+ */
 function updateDeleteSortButtons() {
   const sortBy = GmailCleaner.sortBy.delete;
   const sortOrder = GmailCleaner.sortOrder.delete;
@@ -112,7 +132,10 @@ function updateDeleteSortButtons() {
   }
 }
 
-// Update sort indicator icon
+/**
+ * Updates sort indicator icon to reflect current sort direction.
+ * @param {string} type - Result type: 'subscription', 'delete', or 'unread'.
+ */
 function updateSortIndicator(type) {
   if (type === "delete") {
     // Delete tab has special handling with two sort buttons

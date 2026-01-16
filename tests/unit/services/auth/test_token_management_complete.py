@@ -42,6 +42,7 @@ class TestTokenCreationAndStorage:
         mock_settings.oauth_host = "localhost"
 
         def exists_side_effect(path):
+            """Return True for credentials.json, False for token.json."""
             if "token.json" in str(path):
                 return False
             if "credentials.json" in str(path):
@@ -130,6 +131,7 @@ class TestTokenCreationAndStorage:
 
         # Mock refresh to set valid=True after refresh (simulating successful refresh)
         def refresh_side_effect(*args, **kwargs):
+            """Simulate successful token refresh by setting valid=True."""
             mock_creds.valid = True
             mock_creds.expired = False
 
@@ -209,6 +211,7 @@ class TestTokenValidation:
 
         # Mock refresh to set valid=True after refresh (simulating successful refresh)
         def refresh_side_effect(*args, **kwargs):
+            """Simulate successful token refresh by setting valid=True."""
             mock_creds.valid = True
             mock_creds.expired = False
 
@@ -345,6 +348,7 @@ class TestTokenFileErrors:
 
         # Mock refresh to set valid=True after refresh (simulating successful refresh)
         def refresh_side_effect(*args, **kwargs):
+            """Simulate successful token refresh by setting valid=True."""
             mock_creds.valid = True
             mock_creds.expired = False
 
@@ -352,6 +356,7 @@ class TestTokenFileErrors:
 
         # Mock open to raise IOError when writing to token file, but allow reading
         def open_side_effect(file_path, mode="r", *args, **kwargs):
+            """Raise IOError on token file write, allow other operations."""
             if "w" in mode and str(file_path) == mock_settings.token_file:
                 raise IOError("Permission denied")
             # For reading or other files, return a mock file object

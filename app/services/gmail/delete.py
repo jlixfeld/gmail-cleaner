@@ -31,6 +31,10 @@ from app.services.gmail.helpers import (
 
 logger = logging.getLogger(__name__)
 
+
+# ----- Rate Limit Configuration & Utilities -----
+
+
 # Rate limit retry configuration
 MAX_RETRIES = 5
 INITIAL_BACKOFF = 2  # seconds
@@ -105,15 +109,23 @@ def execute_batch_with_retry(batch, description: str = "batch request"):
                 raise
 
 
-def scan_senders_for_delete(limit: int = 0, filters: Optional[dict] = None):
+# ----- Delete Scan Operations -----
+
+
+def scan_senders_for_delete(limit: int = 0, filters: Optional[dict] = None) -> None:
     """Scan emails and group by sender for bulk delete.
 
     Scans all emails by default, excluding sent, trash, and spam folders.
-    Results are annotated with is_valid_sender and is_my_recipient flags.
+    Results are annotated with `is_valid_sender` and `is_my_recipient` flags
+    based on database lookups.
 
-    **Args:**
-        - `limit`: Maximum emails to scan. 0 = scan all (default). Kept for API compat.
-        - `filters`: Optional Gmail filter options.
+    Note:
+        This is a long-running operation. Progress is communicated via
+        `state.delete_scan_status` which should be polled by the caller.
+
+    Args:
+        limit: Maximum emails to scan. 0 means scan all (default).
+        filters: Gmail filter dict (older_than, after_date, before_date, etc.)
     """
     # Get current user for database lookups
     user = state.get_current_user()
@@ -194,6 +206,7 @@ def scan_senders_for_delete(limit: int = 0, filters: Optional[dict] = None):
         batch_size = 25  # Reduced from 100 to avoid "too many concurrent requests"
 
         def process_message(request_id, response, exception) -> None:
+            """Batch callback to extract sender info and group by domain."""
             nonlocal processed
             processed += 1
 
@@ -307,6 +320,9 @@ def get_delete_scan_results() -> list:
     return state.delete_scan_results.copy()
 
 
+# ----- Message ID Fetching -----
+
+
 def fetch_message_ids_for_sender(service, sender: str) -> list[str]:
     """Query Gmail for all message IDs from a sender.
 
@@ -364,6 +380,9 @@ def fetch_message_ids_for_domain(service, domain: str) -> list[str]:
             break
 
     return message_ids
+
+
+# ----- Delete Operations -----
 
 
 def delete_domain_emails_background(domain: str) -> None:
@@ -452,11 +471,14 @@ def delete_emails_by_sender(sender: str, list_id: Optional[str] = None) -> dict:
     """Delete all emails from a specific sender or mailing list.
 
     Queries Gmail directly to get all message IDs, ensuring complete deletion
-    even for emails that arrived after scanning.
+    even for emails that arrived after scanning. Moves emails to Trash.
 
     Args:
         sender: Sender email address (used when list_id is not provided)
-        list_id: List-Id header value for mailing lists (takes precedence over sender)
+        list_id: List-Id header value for mailing lists (takes precedence)
+
+    Returns:
+        Dict with keys: success (bool), deleted (int), size_freed (int), message (str)
     """
     # When list_id is provided, use it for lookup; otherwise require sender
     if not list_id and (not sender or not sender.strip()):
@@ -578,7 +600,16 @@ def delete_emails_by_sender(sender: str, list_id: Optional[str] = None) -> dict:
 
 
 def delete_emails_bulk(senders: list[str]) -> dict:
-    """Delete emails from multiple senders."""
+    """Delete emails from multiple senders synchronously.
+
+    Calls `delete_emails_by_sender` for each sender and aggregates results.
+
+    Args:
+        senders: List of sender email addresses
+
+    Returns:
+        Dict with keys: success (bool), deleted (int), size_freed (int), message (str)
+    """
     if not senders:
         return {
             "success": False,
@@ -723,19 +754,22 @@ def get_delete_bulk_status() -> dict:
     return state.delete_bulk_status.copy()
 
 
-# =============================================================================
-# UNKNOWN SENDERS DETECTION
-# =============================================================================
+# ----- Known Senders Cache & Unknown Sender Detection -----
 
 
-def build_known_senders_cache(limit: int = 5000):
+def build_known_senders_cache(limit: int = 5000) -> None:
     """Build cache of known senders by scanning Sent folder.
 
     Scans sent emails to extract all recipients (To, Cc, Bcc) and builds a set
-    of known contacts. This cache is used to filter unknown senders in scans.
+    of known contacts. This cache is used by `scan_unknown_senders_for_delete`
+    to filter out known senders.
+
+    Note:
+        This is a long-running operation. Progress is communicated via
+        `state.known_senders_status` which should be polled by the caller.
 
     Args:
-        limit: Maximum sent emails to scan. 0 = scan all (no limit).
+        limit: Maximum sent emails to scan. 0 means scan all.
     """
     if limit < 0:
         state.update_known_senders_status(error="Limit cannot be negative", done=True)
@@ -797,6 +831,7 @@ def build_known_senders_cache(limit: int = 5000):
         batch_size = 25  # Reduced from 100 to avoid "too many concurrent requests"
 
         def process_message(request_id, response, exception) -> None:
+            """Batch callback to extract recipients from sent emails."""
             nonlocal processed
             processed += 1
 
@@ -849,15 +884,24 @@ def build_known_senders_cache(limit: int = 5000):
         state.update_known_senders_status(error=str(e), done=True)
 
 
-def scan_unknown_senders_for_delete(limit: int = 1000, filters: Optional[dict] = None):
+def scan_unknown_senders_for_delete(
+    limit: int = 1000, filters: Optional[dict] = None
+) -> None:
     """Scan emails and group by sender, excluding known senders.
 
-    Like scan_senders_for_delete but filters out senders from the known senders cache.
-    The cache must be built first using build_known_senders_cache().
+    Like `scan_senders_for_delete` but filters out senders from the known
+    senders cache. The cache must be built first via `build_known_senders_cache`.
+
+    Note:
+        This is a long-running operation. Progress is communicated via
+        `state.delete_scan_status` which should be polled by the caller.
 
     Args:
-        limit: Maximum emails to scan. 0 = scan all (no limit).
-        filters: Optional Gmail filter options.
+        limit: Maximum emails to scan. 0 means scan all.
+        filters: Gmail filter dict (older_than, after_date, before_date, etc.)
+
+    Raises:
+        No exceptions raised; errors are captured in `state.delete_scan_status['error']`.
     """
     if limit < 0:
         state.reset_delete_scan()
@@ -943,6 +987,7 @@ def scan_unknown_senders_for_delete(limit: int = 1000, filters: Optional[dict] =
         batch_size = 25  # Reduced from 100 to avoid "too many concurrent requests"
 
         def process_message(request_id, response, exception) -> None:
+            """Batch callback to process messages, skipping known senders."""
             nonlocal processed, skipped
             processed += 1
 

@@ -29,6 +29,9 @@ logger = logging.getLogger(__name__)
 _auth_in_progress = {"active": False}
 
 
+# ----- Helper Functions -----
+
+
 def _is_file_empty(file_path: str) -> bool:
     """Check if a file exists and is empty.
 
@@ -184,11 +187,24 @@ def _get_credentials_path() -> str | None:
     return None
 
 
-def get_gmail_service():
+# ----- Gmail Service Authentication -----
+
+
+def get_gmail_service() -> tuple:
     """Get authenticated Gmail API service.
 
+    Loads credentials from token file, refreshes if expired, or initiates
+    OAuth flow in a background thread if no valid credentials exist.
+
+    Note:
+        If OAuth is triggered, returns immediately with an error message
+        while the OAuth flow runs in background. Caller should retry after
+        user completes browser authorization.
+
     Returns:
-        tuple: (service, error_message) - service is None if auth needed
+        Tuple of (service, error_message). On success, service is the Gmail
+        API resource and error_message is None. On failure/pending auth,
+        service is None and error_message describes the issue.
     """
     creds = None
 
@@ -249,6 +265,7 @@ def get_gmail_service():
             _auth_in_progress["active"] = True
 
             def run_oauth() -> None:
+                """Execute OAuth flow in background thread."""
                 try:
                     # Try to create the OAuth flow - this will fail if credentials.json is invalid
                     try:
@@ -404,6 +421,7 @@ def get_gmail_service():
 
                         # Create handler factory with thread-safe primitives
                         def handler_factory(*args, **kwargs):
+                            """Create OAuthCallbackHandler with shared callback primitives."""
                             return OAuthCallbackHandler(
                                 callback_event,
                                 callback_lock,
@@ -638,6 +656,9 @@ def get_gmail_service():
         state.update_current_user(email="Unknown", logged_in=True)
 
     return service, None
+
+
+# ----- Session Management -----
 
 
 def sign_out() -> dict:
