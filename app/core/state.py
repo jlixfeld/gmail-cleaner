@@ -44,6 +44,7 @@ class AppState:
         self._unread_scan_lock = threading.Lock()
         self._unread_action_lock = threading.Lock()
         self._known_senders_lock = threading.Lock()
+        self._recipients_scan_lock = threading.Lock()
 
         # === User state ===
         self._current_user: dict = {"email": None, "logged_in": False}
@@ -163,6 +164,16 @@ class AppState:
             "done": False,
             "error": None,
             "sender_count": 0,
+            "scanned_emails": 0,
+        }
+
+        # === Recipients scan state (for auto-scan on tab selection) ===
+        self._recipients_scan_status: dict = {
+            "progress": 0,
+            "message": "Ready",
+            "done": False,
+            "error": None,
+            "recipient_count": 0,
             "scanned_emails": 0,
         }
 
@@ -586,6 +597,32 @@ class AppState:
         """Check if known senders cache has been built."""
         with self._known_senders_lock:
             return len(self._known_senders) > 0
+
+    # =========================================================================
+    # RECIPIENTS SCAN STATE
+    # =========================================================================
+
+    def get_recipients_scan_status(self) -> dict:
+        """Get a copy of the recipients scan status."""
+        with self._recipients_scan_lock:
+            return self._recipients_scan_status.copy()
+
+    def update_recipients_scan_status(self, **kwargs: Any) -> None:
+        """Update recipients scan status with the provided key-value pairs."""
+        with self._recipients_scan_lock:
+            self._recipients_scan_status.update(kwargs)
+
+    def reset_recipients_scan(self) -> None:
+        """Reset recipients scan state."""
+        with self._recipients_scan_lock:
+            self._recipients_scan_status = {
+                "progress": 0,
+                "message": "Ready",
+                "done": False,
+                "error": None,
+                "recipient_count": 0,
+                "scanned_emails": 0,
+            }
 
     # =========================================================================
     # BACKWARD COMPATIBILITY PROPERTIES
